@@ -1,0 +1,19 @@
+summary: A streamlined git-based tool for task tracking of a project
+whatdos:
+  basic-functionality:
+    summary: |
+      Implement the absolute minimum stuff for the tool to get it to be useful
+      for tracking the progress of this tool
+    whatdos:
+      read-back-whatdos: Ability to invoke `wd` to list the current whatdos
+      add-whatdos: Ability to invoke `wd add description-of-whatdo` to add a whatdo
+      start-whatdo: Ability to invoke `wd start <whatdo-id>` to start a whatdo
+      finish-whatdo: Ability to invoke `wd finish` to finish the current whatdo
+  other-ideas:
+    whatdos:
+      whatdo-switch: Switch to a different whatdo while working on a different one
+  tweaks:
+    whatdos:
+      support-arbirtrary-file: wd [--file|-f] <path-to-yaml-file>
+  
+
