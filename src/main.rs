@@ -1,3 +1,4 @@
+use anyhow::Result;
 use clap::{Parser, Subcommand};
 
 extern crate clap;
@@ -9,15 +10,18 @@ mod core;
 #[derive(Subcommand, Debug, Clone)]
 enum Command {
     // Add a new whatdo
-    #[command(about = "Add a new whatdo")]
-    Add {
-        id: String,
+    // #[command(about = "Add a new whatdo")]
+    // Add {
+    //     id: String,
 
-        #[arg(short, long)]
-        tags: Vec<String>,
-    },
-    #[command(about = "Show a whatdo")]
-    Show { id: String },
+    //     #[arg(short, long)]
+    //     tags: Vec<String>,
+    // },
+    // #[command(about = "Show a whatdo")]
+    // Show { id: String },
+    #[command(about = "Show the next whatdo in the queue")]
+    Next {},
+
     #[command(about = "Start a whatdo by checking out a git branch")]
     Start { id: String },
     // /// list all the projects
@@ -38,16 +42,31 @@ struct Args {
     cmd: Option<Command>,
 }
 
-fn add(id: String) {
-    core::add(&id, "Test summary").expect("Error");
+// fn add(id: String) {
+//     core::add(&id, "Test summary").expect("Error");
+// }
+fn next() -> Result<()> {
+    match core::next()? {
+        Some(wd) => println!("{}", wd),
+        None => println!(""),
+    };
+    Ok(())
 }
 
-fn main() {
+fn run(args: &Args) -> Result<()> {
+    match args.cmd {
+        Some(Command::Next {}) => next(),
+        // None => core::list(),
+        _ => Ok(()),
+    }
+}
+
+fn main() -> Result<()> {
     let args = Args::parse();
 
     match args.cmd {
-        Some(Command::Add { id, tags }) => add(id),
-        None => core::list(),
-        _ => {}
+        Some(Command::Next {}) => next(),
+        // None => core::list(),
+        _ => Ok(()),
     }
 }

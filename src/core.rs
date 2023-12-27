@@ -1,4 +1,5 @@
 use anyhow::{Error, Result};
+use core::fmt;
 use serde_derive::{Deserialize, Serialize};
 use std::path::{Component, Path};
 use std::process::Command;
@@ -14,6 +15,26 @@ pub struct Whatdo {
     simple_format: bool,
 }
 
+fn deslugify(s: &str) -> String {
+    let mut result = String::new();
+    let mut first = true;
+    for char in s.chars() {
+        match char {
+            '_' | '-' => result.push(' '),
+            _ => {
+                if first {
+                    result.push_str(&char.to_uppercase().to_string())
+                } else {
+                    result.push(char)
+                }
+            }
+        }
+        first = false
+    }
+
+    result
+}
+
 impl Whatdo {
     pub fn simple<T: Into<String>, U: Into<String>>(id: T, summary: U) -> Self {
         Whatdo {
@@ -23,6 +44,26 @@ impl Whatdo {
             queue: None,
             simple_format: true,
         }
+    }
+
+    fn summary(&self) -> String {
+        match &self.summary {
+            Some(s) => s.clone(),
+            None => deslugify(&self.id),
+        }
+    }
+
+    fn whatdos(&self) -> Vec<Whatdo> {
+        match &self.whatdos {
+            None => Vec::new(),
+            Some(wds) => wds.clone(),
+        }
+    }
+}
+
+impl fmt::Display for Whatdo {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "[{}] {}", self.id, self.summary())
     }
 }
 
@@ -177,6 +218,45 @@ pub fn list() {
     println!("list")
 }
 
+fn find_whatdo(root: &Whatdo, id: &str) -> Option<Whatdo> {
+    if root.id == id {
+        return Some(root.clone());
+    }
+
+    let whatdos = match &root.whatdos {
+        None => return None,
+        Some(wds) => wds,
+    };
+
+    for wd in whatdos {
+        if let Some(found) = find_whatdo(&wd, id) {
+            return Some(found);
+        }
+    }
+
+    return None;
+}
+
+fn next_whatdo(wd: &Whatdo) -> Option<Whatdo> {
+    if let Some(queue) = &wd.queue {
+        if queue.len() > 0 {
+            return find_whatdo(wd, &queue[0]);
+        }
+    }
+
+    let whatdos = wd.whatdos();
+    if whatdos.len() == 0 {
+        return Some(wd.clone());
+    }
+
+    return next_whatdo(&whatdos[0]);
+}
+
+pub fn next() -> Result<Option<Whatdo>> {
+    let whatdo = read_current_file()?;
+    Ok(next_whatdo(&whatdo))
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -224,6 +304,17 @@ for tracking the progress of this tool\n",
     fn test_parse_file() {
         let parsed = parse_file(&PathBuf::from_str("./test_data/WHATDO.yaml").unwrap());
         assert_eq!(parsed.unwrap(), test_data_whatdo());
+    }
+
+    #[test]
+    fn test_next_whatdo() {
+        assert_eq!(
+            next_whatdo(&test_data_whatdo()),
+            Some(Whatdo::simple(
+                String::from("read-back-whatdos"),
+                String::from("Ability to invoke `wd` to list the current whatdos"),
+            ))
+        )
     }
 
     // #[test]
