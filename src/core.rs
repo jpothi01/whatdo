@@ -1,10 +1,8 @@
+use super::git;
 use anyhow::{Error, Result};
 use core::fmt;
-use serde_derive::{Deserialize, Serialize};
+use std::path::PathBuf;
 use std::path::{Component, Path};
-use std::process::Command;
-use std::str::FromStr;
-use std::{collections::HashMap, path::PathBuf};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Whatdo {
@@ -65,15 +63,6 @@ impl fmt::Display for Whatdo {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "[{}] {}", self.id, self.summary())
     }
-}
-
-fn get_root() -> Result<PathBuf> {
-    let output = Command::new("git")
-        .args(["rev-parse", "--show-toplevel"])
-        .output()?;
-    return Ok(PathBuf::from(
-        &String::from_utf8(output.stdout).unwrap().trim(),
-    ));
 }
 
 fn get_project_name(path: &Path) -> Result<String> {
@@ -157,7 +146,7 @@ fn parse_file(path: &Path) -> Result<Whatdo> {
 }
 
 fn get_current_file() -> Result<PathBuf> {
-    let root: PathBuf = get_root()?;
+    let root: PathBuf = git::get_root()?;
     Ok(root.join("WHATDO.yaml"))
 }
 
@@ -257,6 +246,10 @@ pub fn next() -> Result<Option<Whatdo>> {
     Ok(next_whatdo(&whatdo))
 }
 
+pub fn start(wd: &Whatdo) -> Result<()> {
+    git::checkout_new_branch(&wd.id)
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -302,7 +295,7 @@ for tracking the progress of this tool\n",
 
     #[test]
     fn test_parse_file() {
-        let parsed = parse_file(&PathBuf::from_str("./test_data/WHATDO.yaml").unwrap());
+        let parsed = parse_file(&PathBuf::from("./test_data/WHATDO.yaml"));
         assert_eq!(parsed.unwrap(), test_data_whatdo());
     }
 

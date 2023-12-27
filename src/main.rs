@@ -6,6 +6,7 @@ extern crate serde_yaml;
 extern crate yaml_rust;
 
 mod core;
+mod git;
 
 #[derive(Subcommand, Debug, Clone)]
 enum Command {
@@ -20,7 +21,10 @@ enum Command {
     // #[command(about = "Show a whatdo")]
     // Show { id: String },
     #[command(about = "Show the next whatdo in the queue")]
-    Next {},
+    Next {
+        #[clap(long, help = "Automatically start the whatdo")]
+        start: bool,
+    },
 
     #[command(about = "Start a whatdo by checking out a git branch")]
     Start { id: String },
@@ -45,27 +49,27 @@ struct Args {
 // fn add(id: String) {
 //     core::add(&id, "Test summary").expect("Error");
 // }
-fn next() -> Result<()> {
-    match core::next()? {
-        Some(wd) => println!("{}", wd),
+fn next(start: bool) -> Result<()> {
+    let next = core::next()?;
+    match next {
         None => println!(""),
-    };
-    Ok(())
-}
-
-fn run(args: &Args) -> Result<()> {
-    match args.cmd {
-        Some(Command::Next {}) => next(),
-        // None => core::list(),
-        _ => Ok(()),
+        Some(wd) => {
+            if start {
+                core::start(&wd)?;
+                println!("Starting {}", wd)
+            } else {
+                println!("{}", wd)
+            }
+        }
     }
+    Ok(())
 }
 
 fn main() -> Result<()> {
     let args = Args::parse();
 
     match args.cmd {
-        Some(Command::Next {}) => next(),
+        Some(Command::Next { start }) => next(start),
         // None => core::list(),
         _ => Ok(()),
     }
