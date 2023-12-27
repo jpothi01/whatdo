@@ -21,10 +21,10 @@ pub struct Whatdo {
 }
 
 impl Whatdo {
-    pub fn simple(id: String, summary: String) -> Self {
+    pub fn simple<T: Into<String>, U: Into<String>>(id: T, summary: U) -> Self {
         Whatdo {
-            id,
-            summary,
+            id: id.into(),
+            summary: summary.into(),
             whatdos: vec![],
         }
     }
@@ -121,7 +121,26 @@ mod test {
                 summary: String::from(
                     "A streamlined git-based tool for task tracking of a project"
                 ),
-                whatdos: vec![]
+                whatdos: vec![Whatdo {
+                    id: String::from("basic-functionality"),
+                    summary: String::from(
+                        "Implement the absolute minimum stuff for the tool to get it to be useful
+for tracking the progress of this tool\n"
+                    ),
+                    whatdos: vec![
+                        Whatdo::simple(
+                            String::from("read-back-whatdos"),
+                            String::from("Ability to invoke `wd` to list the current whatdos")
+                        ),
+                        Whatdo {
+                            id: String::from("finish-whatdo"),
+                            summary: String::from(
+                                "Ability to invoke `wd finish` to finish the current whatdo"
+                            ),
+                            whatdos: vec![Whatdo::simple("delete-whatdo", "Delete the whatdo")]
+                        }
+                    ]
+                }]
             }
         );
     }
