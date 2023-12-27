@@ -1,4 +1,7 @@
 summary: A streamlined git-based tool for task tracking of a project
+queue:
+  - read-back-whatdos
+  - delete-whatdo
 whatdos:
   basic-functionality:
     summary: |
@@ -10,5 +13,3 @@ whatdos:
         summary: Ability to invoke `wd finish` to finish the current whatdo
         whatdos:
           delete-whatdo: Delete the whatdo
-
-
