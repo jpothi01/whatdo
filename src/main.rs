@@ -38,11 +38,15 @@ struct Args {
     cmd: Option<Command>,
 }
 
+fn add(id: String) {
+    core::add(&id, "Test summary").expect("Error");
+}
+
 fn main() {
     let args = Args::parse();
 
     match args.cmd {
-        Some(Command::Add { id, tags }) => core::add(&id),
+        Some(Command::Add { id, tags }) => add(id),
         None => core::list(),
         _ => {}
     }

@@ -10,10 +10,11 @@ whatdos:
       start-whatdo: Ability to invoke `wd start <whatdo-id>` to start a whatdo
       finish-whatdo: Ability to invoke `wd finish` to finish the current whatdo
   other-ideas:
+    summary: Things I might not do
     whatdos:
       whatdo-switch: Switch to a different whatdo while working on a different one
   tweaks:
+    summary: Simple things I might do
     whatdos:
       support-arbirtrary-file: wd [--file|-f] <path-to-yaml-file>
-  
 
