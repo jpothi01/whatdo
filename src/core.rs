@@ -250,6 +250,11 @@ pub fn start(wd: &Whatdo) -> Result<()> {
     git::checkout_new_branch(&wd.id)
 }
 
+pub fn get(id: &str) -> Result<Option<Whatdo>> {
+    let whatdo = read_current_file()?;
+    Ok(find_whatdo(&whatdo, id))
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

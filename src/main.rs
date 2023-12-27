@@ -65,11 +65,24 @@ fn next(start: bool) -> Result<()> {
     Ok(())
 }
 
+fn start(id: &str) -> Result<()> {
+    let wd = core::get(id)?;
+    match wd {
+        None => eprintln!("Not found"),
+        Some(wd) => {
+            core::start(&wd)?;
+            println!("Starting {}", wd)
+        }
+    }
+    Ok(())
+}
+
 fn main() -> Result<()> {
     let args = Args::parse();
 
     match args.cmd {
         Some(Command::Next { start }) => next(start),
+        Some(Command::Start { id }) => start(&id),
         // None => core::list(),
         _ => Ok(()),
     }
