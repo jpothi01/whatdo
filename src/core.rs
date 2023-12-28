@@ -1,6 +1,7 @@
 use super::git;
 use anyhow::{Error, Result};
 use core::fmt;
+use serde_yaml::Mapping;
 use std::path::PathBuf;
 use std::path::{Component, Path};
 
@@ -154,51 +155,75 @@ fn read_current_file() -> Result<Whatdo> {
     return parse_file(&get_current_file()?);
 }
 
-// fn serialize_whatdo(whatdo: &Whatdo) -> (serde_yaml::Value, serde_yaml::Value) {
-//     if whatdo.simple_format {
-//         return (
-//             serde_yaml::Value::String(whatdo.id.clone()),
-//             serde_yaml::Value::String(whatdo.summary.clone()),
-//         );
-//     }
+fn serialize_whatdo(whatdo: &Whatdo) -> (serde_yaml::Value, serde_yaml::Value) {
+    if whatdo.simple_format {
+        let summary_value = if let Some(summary) = whatdo.summary.clone() {
+            serde_yaml::Value::String(summary)
+        } else {
+            serde_yaml::Value::Mapping(Mapping::new())
+        };
+        return (serde_yaml::Value::String(whatdo.id.clone()), summary_value);
+    }
 
-//     let mut mapping = serde_yaml::Mapping::new();
-//     mapping.insert(
-//         serde_yaml::Value::String(String::from("summary")),
-//         serde_yaml::Value::String(whatdo.summary.clone()),
-//     );
-//     if whatdo.whatdos.len() > 0 {
-//         let mut whatdo_mapping = serde_yaml::Mapping::new();
-//         for subwhatdo in &whatdo.whatdos {
-//             let (k, v) = serialize_whatdo(&subwhatdo);
-//             whatdo_mapping.insert(k, v);
-//         }
+    let mut mapping = serde_yaml::Mapping::new();
+    if let Some(summary) = whatdo.summary.clone() {
+        mapping.insert(
+            serde_yaml::Value::String(String::from("summary")),
+            serde_yaml::Value::String(summary),
+        );
+    }
 
-//         mapping.insert(
-//             serde_yaml::Value::String(String::from("whatdos")),
-//             serde_yaml::Value::Mapping(whatdo_mapping),
-//         );
-//     }
+    if let Some(whatdos) = whatdo.whatdos.clone() {
+        if whatdos.len() > 0 {
+            let mut whatdo_mapping = serde_yaml::Mapping::new();
+            for subwhatdo in &whatdos {
+                let (k, v) = serialize_whatdo(&subwhatdo);
+                whatdo_mapping.insert(k, v);
+            }
 
-//     return (
-//         serde_yaml::Value::String(whatdo.id.clone()),
-//         serde_yaml::Value::Mapping(mapping),
-//     );
-// }
+            mapping.insert(
+                serde_yaml::Value::String(String::from("whatdos")),
+                serde_yaml::Value::Mapping(whatdo_mapping),
+            );
+        }
+    }
 
-// fn write_to_file(whatdo: &Whatdo) -> Result<()> {
-//     let path = get_current_file()?;
-//     let serialized = serialize_whatdo(whatdo);
-//     let file = std::fs::File::create(path)?;
-//     serde_yaml::to_writer(file, &serialized.1)?;
-//     Ok(())
-// }
+    if let Some(queue) = whatdo.queue.clone() {
+        if queue.len() > 0 {
+            mapping.insert(
+                serde_yaml::Value::String(String::from("queue")),
+                serde_yaml::Value::Sequence(
+                    queue
+                        .into_iter()
+                        .map(|i| serde_yaml::Value::String(i))
+                        .collect(),
+                ),
+            );
+        }
+    }
+
+    return (
+        serde_yaml::Value::String(whatdo.id.clone()),
+        serde_yaml::Value::Mapping(mapping),
+    );
+}
+
+fn write_to_file(whatdo: &Whatdo) -> Result<()> {
+    let path = get_current_file()?;
+    let serialized = serialize_whatdo(whatdo);
+    let file = std::fs::File::create(path)?;
+    serde_yaml::to_writer(file, &serialized.1)?;
+    Ok(())
+}
 
 pub fn add(id: &str, summary: &str) -> Result<()> {
     let mut whatdo = read_current_file()?;
     let new_whatdo = Whatdo::simple(id, summary);
-    // whatdo.whatdos.push(new_whatdo);
-    // write_to_file(&whatdo)?;
+    if whatdo.whatdos.is_none() {
+        whatdo.whatdos = Some(Vec::new());
+    }
+    whatdo.whatdos.as_mut().unwrap().push(new_whatdo);
+    write_to_file(&whatdo)?;
 
     Ok(())
 }
@@ -315,12 +340,12 @@ for tracking the progress of this tool\n",
         )
     }
 
-    // #[test]
-    // fn test_serialize() {
-    //     let serialized = serialize_whatdo(&test_data_whatdo());
-    //     let parsed: serde_yaml::Value =
-    //         serde_yaml::from_str(&std::fs::read_to_string("./test_data/WHATDO.yaml").unwrap())
-    //             .unwrap();
-    //     assert_eq!(serialized.1, parsed);
-    // }
+    #[test]
+    fn test_serialize() {
+        let serialized = serialize_whatdo(&test_data_whatdo());
+        let parsed: serde_yaml::Value =
+            serde_yaml::from_str(&std::fs::read_to_string("./test_data/WHATDO.yaml").unwrap())
+                .unwrap();
+        assert_eq!(serialized.1, parsed);
+    }
 }
