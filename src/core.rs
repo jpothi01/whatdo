@@ -216,22 +216,6 @@ fn write_to_file(whatdo: &Whatdo) -> Result<()> {
     Ok(())
 }
 
-pub fn add(id: &str, summary: &str) -> Result<()> {
-    let mut whatdo = read_current_file()?;
-    let new_whatdo = Whatdo::simple(id, summary);
-    if whatdo.whatdos.is_none() {
-        whatdo.whatdos = Some(Vec::new());
-    }
-    whatdo.whatdos.as_mut().unwrap().push(new_whatdo);
-    write_to_file(&whatdo)?;
-
-    Ok(())
-}
-
-pub fn list() {
-    println!("list")
-}
-
 fn find_whatdo(root: &Whatdo, id: &str) -> Option<Whatdo> {
     if root.id == id {
         return Some(root.clone());
@@ -266,6 +250,22 @@ fn next_whatdo(wd: &Whatdo) -> Option<Whatdo> {
     return next_whatdo(&whatdos[0]);
 }
 
+pub fn add(id: &str, summary: &str) -> Result<()> {
+    let mut whatdo = read_current_file()?;
+    let new_whatdo = Whatdo::simple(id, summary);
+    if whatdo.whatdos.is_none() {
+        whatdo.whatdos = Some(Vec::new());
+    }
+    whatdo.whatdos.as_mut().unwrap().push(new_whatdo);
+    write_to_file(&whatdo)?;
+
+    Ok(())
+}
+
+pub fn list() {
+    println!("list")
+}
+
 pub fn next() -> Result<Option<Whatdo>> {
     let whatdo = read_current_file()?;
     Ok(next_whatdo(&whatdo))
@@ -278,6 +278,50 @@ pub fn start(wd: &Whatdo) -> Result<()> {
 pub fn get(id: &str) -> Result<Option<Whatdo>> {
     let whatdo = read_current_file()?;
     Ok(find_whatdo(&whatdo, id))
+}
+
+fn delete_whatdo(whatdo: &Whatdo, id: &str) -> Whatdo {
+    debug_assert!(whatdo.id != id);
+    let mut new_whatdo = whatdo.clone();
+    if let Some(queue) = &mut new_whatdo.queue {
+        let found = queue.iter().position(|i| i == id);
+        if let Some(found) = found {
+            queue.remove(found);
+        }
+    }
+
+    if new_whatdo.queue.as_ref().map(|q| q.len() == 0) == Some(true) {
+        new_whatdo.queue = None
+    }
+
+    if let Some(whatdos) = &mut new_whatdo.whatdos {
+        let found = whatdos.iter().position(|wd| wd.id == id);
+        if let Some(found) = found {
+            whatdos.remove(found);
+        }
+    }
+
+    if new_whatdo.whatdos.as_ref().map(|wds| wds.len() > 0) == Some(true) {
+        new_whatdo.whatdos = Some(
+            new_whatdo
+                .whatdos
+                .unwrap()
+                .iter()
+                .map(|wd| delete_whatdo(wd, id))
+                .collect(),
+        );
+    } else {
+        new_whatdo.whatdos = None
+    }
+
+    return new_whatdo;
+}
+
+pub fn delete(id: &str) -> Result<()> {
+    let whatdo = read_current_file()?;
+    let new_whatdo = delete_whatdo(&whatdo, id);
+    write_to_file(&new_whatdo)?;
+    Ok(())
 }
 
 #[cfg(test)]
@@ -338,6 +382,76 @@ for tracking the progress of this tool\n",
                 String::from("Ability to invoke `wd` to list the current whatdos"),
             ))
         )
+    }
+
+    #[test]
+    fn test_delete_whatdo() {
+        let deleted = delete_whatdo(&test_data_whatdo(), "delete-whatdo");
+        assert_eq!(
+            deleted,
+            Whatdo {
+                id: String::from("test_data"),
+                summary: Some(String::from(
+                    "A streamlined git-based tool for task tracking of a project",
+                )),
+                whatdos: Some(vec![Whatdo {
+                    id: String::from("basic-functionality"),
+                    summary: Some(String::from(
+                        "Implement the absolute minimum stuff for the tool to get it to be useful
+for tracking the progress of this tool\n",
+                    )),
+                    whatdos: Some(vec![
+                        Whatdo::simple(
+                            String::from("read-back-whatdos"),
+                            String::from("Ability to invoke `wd` to list the current whatdos"),
+                        ),
+                        Whatdo {
+                            id: String::from("finish-whatdo"),
+                            summary: Some(String::from(
+                                "Ability to invoke `wd finish` to finish the current whatdo",
+                            )),
+                            whatdos: None,
+                            simple_format: false,
+                            queue: None,
+                        },
+                    ]),
+                    queue: None,
+                    simple_format: false,
+                }]),
+                simple_format: false,
+                queue: Some(vec![String::from("read-back-whatdos")]),
+            }
+        );
+        let deleted_again = delete_whatdo(&deleted, "read-back-whatdos");
+        assert_eq!(
+            deleted_again,
+            Whatdo {
+                id: String::from("test_data"),
+                summary: Some(String::from(
+                    "A streamlined git-based tool for task tracking of a project",
+                )),
+                whatdos: Some(vec![Whatdo {
+                    id: String::from("basic-functionality"),
+                    summary: Some(String::from(
+                        "Implement the absolute minimum stuff for the tool to get it to be useful
+for tracking the progress of this tool\n",
+                    )),
+                    whatdos: Some(vec![Whatdo {
+                        id: String::from("finish-whatdo"),
+                        summary: Some(String::from(
+                            "Ability to invoke `wd finish` to finish the current whatdo",
+                        )),
+                        whatdos: None,
+                        simple_format: false,
+                        queue: None,
+                    },]),
+                    queue: None,
+                    simple_format: false,
+                }]),
+                simple_format: false,
+                queue: None
+            }
+        );
     }
 
     #[test]

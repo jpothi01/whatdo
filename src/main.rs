@@ -3,6 +3,7 @@ use clap::{Parser, Subcommand};
 
 extern crate clap;
 extern crate serde_yaml;
+extern crate sqlite;
 extern crate yaml_rust;
 
 mod core;
@@ -11,13 +12,13 @@ mod git;
 #[derive(Subcommand, Debug, Clone)]
 enum Command {
     // Add a new whatdo
-    // #[command(about = "Add a new whatdo")]
-    // Add {
-    //     id: String,
+    #[command(about = "Add a new whatdo")]
+    Add {
+        id: String,
 
-    //     #[arg(short, long)]
-    //     tags: Vec<String>,
-    // },
+        #[arg(short, long)]
+        tags: Vec<String>,
+    },
     // #[command(about = "Show a whatdo")]
     // Show { id: String },
     #[command(about = "Show the next whatdo in the queue")]
@@ -26,8 +27,17 @@ enum Command {
         start: bool,
     },
 
+    Delete {
+        id: String,
+    },
+    Resolve {
+        id: String,
+    },
+
     #[command(about = "Start a whatdo by checking out a git branch")]
-    Start { id: String },
+    Start {
+        id: String,
+    },
     // /// list all the projects
     // Projects {
     //     #[clap(short, long, default_value_t = String::from("."),forbid_empty_values = true, validator = validate_package_name)]
@@ -77,12 +87,25 @@ fn start(id: &str) -> Result<()> {
     Ok(())
 }
 
+fn delete(id: &str) -> Result<()> {
+    let wd = core::get(id)?;
+    match wd {
+        None => eprintln!("Not found"),
+        Some(wd) => {
+            core::delete(id)?;
+            println!("Deleted {}", &wd)
+        }
+    }
+    Ok(())
+}
+
 fn main() -> Result<()> {
     let args = Args::parse();
 
     match args.cmd {
         Some(Command::Next { start }) => next(start),
         Some(Command::Start { id }) => start(&id),
+        Some(Command::Delete { id }) => delete(&id),
         // None => core::list(),
         _ => Ok(()),
     }
