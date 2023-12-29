@@ -1,5 +1,6 @@
 use super::git;
 use anyhow::{Error, Result};
+use colored::Colorize;
 use core::fmt;
 use log::warn;
 use once_cell::sync::Lazy;
@@ -65,15 +66,112 @@ impl Whatdo {
             Some(wds) => wds.clone(),
         }
     }
-
-    pub fn detailed_display(&self) -> String {
-        format!("{}", self)
-    }
 }
 
 impl fmt::Display for Whatdo {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "[{}] {}", self.id, self.summary())
+        write!(f, "[{}]", self.id.yellow())?;
+        if let Some(p) = self.priority {
+            write!(f, " [P{}]", p.to_string().bold())?;
+        }
+        if let Some(tags) = &self.tags {
+            write!(f, " [")?;
+            let mut first = true;
+            for tag in tags {
+                write!(f, "{}", tag)?;
+                if !first {
+                    write!(f, ",")?;
+                }
+                first = false;
+            }
+            write!(f, "]")?;
+        }
+        write!(f, " {}", self.summary())
+    }
+}
+
+pub struct WhatdoDetail(pub Whatdo);
+
+struct WhatdoNode {
+    whatdo: Whatdo,
+    level: usize,
+    children: Vec<Whatdo>,
+}
+
+pub struct WhatdoTreeView {
+    pub root: Whatdo,
+    pub filter: Box<dyn Fn(&Whatdo) -> bool>,
+    // If true, all children of selected nodes will be printed
+    pub transitive: bool,
+}
+
+impl WhatdoTreeView {
+    fn fmt_rec(
+        &self,
+        f: &mut fmt::Formatter<'_>,
+        whatdo: &Whatdo,
+        unprinted_path: &mut Vec<String>,
+        level: usize,
+        ancestor_satisfied_filter: bool,
+    ) -> fmt::Result {
+        let satisfies_filter = (*self.filter)(whatdo);
+        let transitively_satisfies_filter =
+            satisfies_filter || self.transitive && ancestor_satisfied_filter;
+
+        if whatdo.id != self.root.id {
+            if transitively_satisfies_filter {
+                for (i, id) in unprinted_path.iter().enumerate() {
+                    writeln!(
+                        f,
+                        "{}",
+                        format!("{:>>width$}[{}]", "", id, width = level - i - 2).dimmed()
+                    )?;
+                }
+                unprinted_path.clear();
+            }
+
+            if satisfies_filter {
+                writeln!(
+                    f,
+                    "{}",
+                    format!("{:>>width$}{}", "", whatdo, width = level - 1)
+                )?;
+            } else if transitively_satisfies_filter {
+                writeln!(
+                    f,
+                    "{}",
+                    format!("{:>>width$}[{}]", "", whatdo.id, width = level - 1).dimmed()
+                )?;
+            } else {
+                unprinted_path.push(whatdo.id.clone());
+            }
+        }
+
+        if let Some(whatdos) = whatdo.whatdos.as_ref().filter(|wds| wds.len() > 0) {
+            for wd in whatdos {
+                self.fmt_rec(
+                    f,
+                    wd,
+                    unprinted_path,
+                    level + 1,
+                    transitively_satisfies_filter,
+                )?;
+            }
+        }
+
+        // If none of our children cleared the unprinted path,
+        // remove ourself from the unprinted path
+        if unprinted_path.last() == Some(&whatdo.id) {
+            unprinted_path.remove(unprinted_path.len() - 1);
+        }
+
+        Ok(())
+    }
+}
+
+impl<'a> fmt::Display for WhatdoTreeView {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.fmt_rec(f, &self.root, &mut vec![], 0, false)
     }
 }
 
@@ -454,6 +552,10 @@ pub fn start(wd: &Whatdo) -> Result<()> {
 pub fn get(id: &str) -> Result<Option<Whatdo>> {
     let whatdo = read_current_file()?;
     Ok(find_whatdo(&whatdo, id))
+}
+
+pub fn root() -> Result<Whatdo> {
+    read_current_file()
 }
 
 pub fn current() -> Result<Option<Whatdo>> {

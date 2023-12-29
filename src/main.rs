@@ -3,7 +3,10 @@ use core::NextAmount;
 use anyhow::{Error, Result};
 use clap::{Parser, Subcommand};
 
+use crate::core::{Whatdo, WhatdoTreeView};
+
 extern crate clap;
+extern crate colored;
 extern crate env_logger;
 extern crate log;
 extern crate once_cell;
@@ -49,8 +52,25 @@ enum Command {
         #[arg(long, help = "ID of the parent whatdo, if any")]
         parent: Option<String>,
     },
-    #[command(about = "Show a whatdo")]
-    Show { id: String },
+    #[command(about = "Show all whatdos or a specific whatdo")]
+    Show {
+        #[arg(help = "ID of the whatdo to show")]
+        id: Option<String>,
+
+        #[arg(
+            short,
+            long,
+            help = "Comma-separated list of tags. Only show whatdos that has one of the given tags"
+        )]
+        tags: Vec<String>,
+
+        #[arg(
+            short,
+            long,
+            help = "Comma-separated list of priorties. Only show whatdos that has one of the given priorities"
+        )]
+        priorities: Vec<i64>,
+    },
     #[command(about = "Show the next whatdo in the queue")]
     Next {
         #[clap(
@@ -73,7 +93,7 @@ enum Command {
         tags: Vec<String>,
     },
 
-    #[command(about = "Alias for 'status'")]
+    #[command(about = "Alias for 'show --all'")]
     Ls {},
     #[command(about = "Alias for 'delete'")]
     Rm { id: String },
@@ -117,14 +137,47 @@ fn add(
     Ok(())
 }
 
-fn show(id: String) -> Result<()> {
-    let wd = core::get(&id)?;
-    match wd {
-        None => eprintln!("Not found"),
-        Some(wd) => {
-            println!("{}", wd.detailed_display())
-        }
+fn show(id: Option<String>, tags: Vec<String>, priorities: Vec<i64>) -> Result<()> {
+    if id.is_some() && (tags.len() > 0 || priorities.len() > 0) {
+        return Err(Error::msg(
+            "Cannot specify both an ID and tags or priorities",
+        ));
     }
+
+    let root = core::root()?;
+
+    if let Some(id) = id {
+        let wd = core::get(&id)?;
+        match wd {
+            None => eprintln!("Not found"),
+            Some(wd) => {
+                print!(
+                    "{}",
+                    WhatdoTreeView {
+                        root,
+                        filter: Box::new(move |w| w.id == id),
+                        transitive: true
+                    }
+                )
+            }
+        }
+    } else {
+        print!(
+            "{}",
+            WhatdoTreeView {
+                root,
+                filter: Box::new(move |w: &Whatdo| {
+                    (tags.len() == 0
+                        || (w.tags.is_some()
+                            && w.tags.as_ref().unwrap().iter().any(|t| tags.contains(t))))
+                        && (priorities.len() == 0
+                            || (w.priority.is_some() && priorities.contains(&w.priority.unwrap())))
+                }),
+                transitive: true
+            }
+        )
+    }
+
     Ok(())
 }
 
@@ -231,7 +284,11 @@ fn main() -> Result<()> {
             priority,
             parent,
         }) => add(id, tags, summary, priority, parent),
-        Some(Command::Show { id }) => show(id),
+        Some(Command::Show {
+            id,
+            tags,
+            priorities,
+        }) => show(id, tags, priorities),
         Some(Command::Next {
             start,
             all,
@@ -243,7 +300,7 @@ fn main() -> Result<()> {
         Some(Command::Delete { id }) => delete(&id),
         Some(Command::Rm { id }) => delete(&id),
         Some(Command::Resolve { id }) => resolve(&id),
-        Some(Command::Ls {}) => status(),
+        Some(Command::Ls {}) => next(false, true, None, vec![]),
         Some(Command::Status {}) => status(),
         None => status(),
         _ => Ok(()),
