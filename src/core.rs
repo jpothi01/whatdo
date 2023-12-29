@@ -1,7 +1,10 @@
 use super::git;
 use anyhow::{Error, Result};
 use core::fmt;
+use log::warn;
+use once_cell::sync::Lazy;
 use serde_yaml::{Mapping, Number};
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::path::{Component, Path};
 
@@ -12,6 +15,7 @@ pub struct Whatdo {
     pub whatdos: Option<Vec<Whatdo>>,
     pub queue: Option<Vec<String>>,
     pub priority: Option<i64>,
+    pub tags: Option<Vec<String>>,
     simple_format: bool,
 }
 
@@ -43,6 +47,7 @@ impl Whatdo {
             whatdos: None,
             queue: None,
             priority: None,
+            tags: None,
             simple_format: true,
         }
     }
@@ -72,6 +77,17 @@ impl fmt::Display for Whatdo {
     }
 }
 
+static TAG_RE: Lazy<regex::Regex> = Lazy::new(|| regex::Regex::new("^[a-z0-9-_]+$").unwrap());
+static ID_RE: Lazy<regex::Regex> = Lazy::new(|| regex::Regex::new("^[a-zA-Z0-9-_/]+$").unwrap());
+
+fn valid_tag(tag: &str) -> bool {
+    return TAG_RE.is_match(tag);
+}
+
+fn valid_id(id: &str) -> bool {
+    return ID_RE.is_match(id);
+}
+
 fn get_project_name(path: &Path) -> Result<String> {
     match path.components().nth_back(1) {
         Some(Component::Normal(n)) => Ok(n.to_str().unwrap().to_owned()),
@@ -84,7 +100,13 @@ fn parse_whatdo_map(mapping: serde_yaml::Mapping) -> Result<Vec<Whatdo>> {
         .iter()
         .map(|(k, v)| {
             let id = match k {
-                serde_yaml::Value::String(s) => s,
+                serde_yaml::Value::String(s) => {
+                    if valid_id(&s) {
+                        s
+                    } else {
+                        return Err(Error::msg(format!("Invalid whatdo ID: {}", s)));
+                    }
+                }
                 _ => return Err(Error::msg("Expected mapping key to be a string")),
             };
             Ok(parse_whatdo(id, v)?)
@@ -96,7 +118,31 @@ fn parse_queue_sequence(list: serde_yaml::Sequence) -> Result<Vec<String>> {
     list.iter()
         .map(|v| {
             let id = match v {
-                serde_yaml::Value::String(s) => s,
+                serde_yaml::Value::String(s) => {
+                    if valid_id(&s) {
+                        s
+                    } else {
+                        return Err(Error::msg(format!("Invalid whatdo ID: {}", s)));
+                    }
+                }
+                _ => return Err(Error::msg("Expected sequence item to be a string")),
+            };
+            Ok(id.clone())
+        })
+        .collect()
+}
+
+fn parse_tags_sequence(list: serde_yaml::Sequence) -> Result<Vec<String>> {
+    list.iter()
+        .map(|v| {
+            let id = match v {
+                serde_yaml::Value::String(s) => {
+                    if valid_tag(&s) {
+                        s
+                    } else {
+                        return Err(Error::msg(format!("Invalid tag: {}", s)));
+                    }
+                }
                 _ => return Err(Error::msg("Expected sequence item to be a string")),
             };
             Ok(id.clone())
@@ -139,12 +185,20 @@ fn parse_whatdo(id: &str, data: &serde_yaml::Value) -> Result<Whatdo> {
                     _ => return Err(Error::msg("Expected 'priority' to be a number")),
                 },
             };
+            let tags_sequence = match items.get("tags") {
+                None => None,
+                Some(d) => match d {
+                    serde_yaml::Value::Sequence(s) => Some(s.clone()),
+                    _ => return Err(Error::msg("Expected 'tags' to be a sequence")),
+                },
+            };
 
             Ok(Whatdo {
                 id: String::from(id),
                 summary: summary.cloned(),
                 whatdos: whatdos_map.map(parse_whatdo_map).transpose()?,
                 queue: queue_sequence.map(parse_queue_sequence).transpose()?,
+                tags: tags_sequence.map(parse_tags_sequence).transpose()?,
                 priority,
                 simple_format: false,
             })
@@ -191,38 +245,45 @@ fn serialize_whatdo(whatdo: &Whatdo) -> (serde_yaml::Value, serde_yaml::Value) {
     }
 
     if let Some(whatdos) = whatdo.whatdos.clone() {
-        if whatdos.len() > 0 {
-            let mut whatdo_mapping = serde_yaml::Mapping::new();
-            for subwhatdo in &whatdos {
-                let (k, v) = serialize_whatdo(&subwhatdo);
-                whatdo_mapping.insert(k, v);
-            }
-
-            mapping.insert(
-                serde_yaml::Value::String(String::from("whatdos")),
-                serde_yaml::Value::Mapping(whatdo_mapping),
-            );
+        let mut whatdo_mapping = serde_yaml::Mapping::new();
+        for subwhatdo in &whatdos {
+            let (k, v) = serialize_whatdo(&subwhatdo);
+            whatdo_mapping.insert(k, v);
         }
+
+        mapping.insert(
+            serde_yaml::Value::String(String::from("whatdos")),
+            serde_yaml::Value::Mapping(whatdo_mapping),
+        );
     }
 
     if let Some(queue) = whatdo.queue.clone() {
-        if queue.len() > 0 {
-            mapping.insert(
-                serde_yaml::Value::String(String::from("queue")),
-                serde_yaml::Value::Sequence(
-                    queue
-                        .into_iter()
-                        .map(|i| serde_yaml::Value::String(i))
-                        .collect(),
-                ),
-            );
-        }
+        mapping.insert(
+            serde_yaml::Value::String(String::from("queue")),
+            serde_yaml::Value::Sequence(
+                queue
+                    .into_iter()
+                    .map(|i| serde_yaml::Value::String(i))
+                    .collect(),
+            ),
+        );
     }
 
     if let Some(priority) = whatdo.priority {
         mapping.insert(
             serde_yaml::Value::String(String::from("priority")),
             serde_yaml::Value::Number(Number::from(priority)),
+        );
+    }
+
+    if let Some(tags) = whatdo.tags.clone() {
+        mapping.insert(
+            serde_yaml::Value::String(String::from("tags")),
+            serde_yaml::Value::Sequence(
+                tags.into_iter()
+                    .map(|i| serde_yaml::Value::String(i))
+                    .collect(),
+            ),
         );
     }
 
@@ -274,11 +335,72 @@ fn next_whatdo(wd: &Whatdo) -> Option<Whatdo> {
     return next_whatdo(&whatdos[0]);
 }
 
+/// Return all whatdos descedent from the given whatdo in the order
+/// defined by the prioritization algorithm.
+/// Ignore any whatdos (or whatdo trees) for which filter(wd) returns false
+/// Ignore any whatdos that have already been added to visited
+fn sort_whatdos<F: Fn(&Whatdo) -> bool>(
+    wd: &Whatdo,
+    filter: &F,
+    visited: &mut HashSet<String>,
+    ancestor_satisfies_filter: bool,
+) -> Vec<Whatdo> {
+    let mut result: Vec<Whatdo> = Vec::new();
+
+    let satisfies_filter = filter(wd) || ancestor_satisfies_filter;
+
+    if let Some(queue) = &wd.queue {
+        for id in queue {
+            if visited.contains(id) {
+                continue;
+            }
+
+            let queue_wd = match find_whatdo(wd, id) {
+                Some(wd) => wd,
+                None => {
+                    warn!("Queue item not found in {}: {}", wd.id, id);
+                    continue;
+                }
+            };
+
+            let mut other = sort_whatdos(&queue_wd, filter, visited, satisfies_filter);
+            result.append(&mut other);
+            visited.insert(id.clone());
+        }
+    }
+
+    if let Some(mut whatdos) = wd.whatdos.clone().filter(|wd| wd.len() > 0) {
+        whatdos.sort_by(|a, b| match (a.priority, b.priority) {
+            (Some(pa), Some(pb)) => pa.cmp(&pb),
+            (None, Some(_)) => std::cmp::Ordering::Less,
+            (Some(_), None) => std::cmp::Ordering::Greater,
+            (None, None) => std::cmp::Ordering::Equal,
+        });
+        for subwhatdo in whatdos {
+            if visited.contains(&subwhatdo.id) {
+                continue;
+            }
+
+            let mut other = sort_whatdos(&subwhatdo, filter, visited, satisfies_filter);
+            result.append(&mut other);
+            visited.insert(subwhatdo.id.clone());
+        }
+    } else {
+        // Base case
+        if satisfies_filter {
+            result.push(wd.clone());
+        }
+    }
+
+    return result;
+}
+
 pub fn add(
     id: &str,
     tags: Vec<String>,
     summary: Option<&str>,
     priority: Option<i64>,
+    parent: Option<String>,
 ) -> Result<()> {
     let mut whatdo = read_current_file()?;
     let new_whatdo = Whatdo {
@@ -287,6 +409,7 @@ pub fn add(
         simple_format: false,
         queue: None,
         whatdos: None,
+        tags: if tags.len() > 0 { Some(tags) } else { None },
         priority,
     };
     if whatdo.whatdos.is_none() {
@@ -298,9 +421,30 @@ pub fn add(
     Ok(())
 }
 
-pub fn next() -> Result<Option<Whatdo>> {
+pub enum NextAmount {
+    All,
+    AtMost(usize),
+}
+
+pub fn next(amount: NextAmount, tags: Vec<String>) -> Result<Vec<Whatdo>> {
     let whatdo = read_current_file()?;
-    Ok(next_whatdo(&whatdo))
+    let sorted = sort_whatdos(
+        &whatdo,
+        &|wd| {
+            tags.len() == 0
+                || wd
+                    .tags
+                    .as_ref()
+                    .map(|ts| tags.iter().find(|t| ts.contains(t)))
+                    .is_some()
+        },
+        &mut HashSet::new(),
+        false,
+    );
+    match amount {
+        NextAmount::All => Ok(sorted),
+        NextAmount::AtMost(n) => Ok(sorted.into_iter().take(n as usize).collect()),
+    }
 }
 
 pub fn start(wd: &Whatdo) -> Result<()> {
@@ -328,10 +472,6 @@ fn delete_whatdo(whatdo: &Whatdo, id: &str) -> Whatdo {
         }
     }
 
-    if new_whatdo.queue.as_ref().map(|q| q.len() == 0) == Some(true) {
-        new_whatdo.queue = None
-    }
-
     if let Some(whatdos) = &mut new_whatdo.whatdos {
         let found = whatdos.iter().position(|wd| wd.id == id);
         if let Some(found) = found {
@@ -339,18 +479,9 @@ fn delete_whatdo(whatdo: &Whatdo, id: &str) -> Whatdo {
         }
     }
 
-    if new_whatdo.whatdos.as_ref().map(|wds| wds.len() > 0) == Some(true) {
-        new_whatdo.whatdos = Some(
-            new_whatdo
-                .whatdos
-                .unwrap()
-                .iter()
-                .map(|wd| delete_whatdo(wd, id))
-                .collect(),
-        );
-    } else {
-        new_whatdo.whatdos = None
-    }
+    new_whatdo.whatdos = new_whatdo
+        .whatdos
+        .map(|whatdos| whatdos.iter().map(|wd| delete_whatdo(wd, id)).collect());
 
     return new_whatdo;
 }
@@ -398,10 +529,12 @@ for tracking the progress of this tool\n",
                         simple_format: false,
                         queue: None,
                         priority: None,
+                        tags: Some(vec!["a-tag".to_owned()]),
                     },
                 ]),
                 queue: None,
                 priority: Some(0),
+                tags: None,
                 simple_format: false,
             }]),
             simple_format: false,
@@ -410,6 +543,7 @@ for tracking the progress of this tool\n",
                 String::from("delete-whatdo"),
             ]),
             priority: None,
+            tags: None,
         }
     }
 
@@ -459,19 +593,22 @@ for tracking the progress of this tool\n",
                             summary: Some(String::from(
                                 "Ability to invoke `wd finish` to finish the current whatdo",
                             )),
-                            whatdos: None,
+                            whatdos: Some(vec![]),
                             simple_format: false,
                             queue: None,
-                            priority: None
+                            priority: None,
+                            tags: Some(vec!["a-tag".to_owned()]),
                         },
                     ]),
                     queue: None,
                     priority: Some(0),
+                    tags: None,
                     simple_format: false,
                 }]),
                 simple_format: false,
                 queue: Some(vec![String::from("read-back-whatdos")]),
-                priority: None
+                priority: None,
+                tags: None,
             }
         );
         let deleted_again = delete_whatdo(&deleted, "read-back-whatdos");
@@ -492,18 +629,21 @@ for tracking the progress of this tool\n",
                         summary: Some(String::from(
                             "Ability to invoke `wd finish` to finish the current whatdo",
                         )),
-                        whatdos: None,
+                        whatdos: Some(vec![]),
                         simple_format: false,
                         queue: None,
-                        priority: None
+                        priority: None,
+                        tags: Some(vec!["a-tag".to_owned()]),
                     },]),
                     queue: None,
                     priority: Some(0),
+                    tags: None,
                     simple_format: false,
                 }]),
                 simple_format: false,
-                queue: None,
-                priority: None
+                queue: Some(vec![]),
+                priority: None,
+                tags: None,
             }
         );
     }
@@ -515,5 +655,37 @@ for tracking the progress of this tool\n",
             serde_yaml::from_str(&std::fs::read_to_string("./test_data/WHATDO.yaml").unwrap())
                 .unwrap();
         assert_eq!(serialized.1, parsed);
+    }
+
+    #[test]
+    fn test_sort_whatdos() {
+        let whatdo = parse_file(Path::new("./test_data/sort_test.yaml")).unwrap();
+        let sorted = sort_whatdos(&whatdo, &|wd| true, &mut HashSet::new(), false);
+        assert_eq!(
+            sorted.iter().map(|wd| &wd.id).collect::<Vec<_>>(),
+            vec![
+                "read-back-whatdos",
+                "delete-whatdo",
+                "read-users-mind",
+                "less-fossil-fuels",
+                "more-green-energy",
+            ]
+        );
+
+        let sorted_tags = sort_whatdos(
+            &whatdo,
+            &|wd| {
+                wd.tags
+                    .as_ref()
+                    .map(|tags| tags.iter().find(|t| t.as_str() == "todo"))
+                    .is_some()
+            },
+            &mut HashSet::new(),
+            false,
+        );
+        assert_eq!(
+            sorted_tags.iter().map(|wd| &wd.id).collect::<Vec<_>>(),
+            vec!["delete-whatdo", "more-green-energy",]
+        )
     }
 }

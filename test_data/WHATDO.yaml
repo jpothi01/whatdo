@@ -12,5 +12,6 @@ whatdos:
       read-back-whatdos: Ability to invoke `wd` to list the current whatdos
       finish-whatdo: 
         summary: Ability to invoke `wd finish` to finish the current whatdo
+        tags: [a-tag]
         whatdos:
           delete-whatdo: Delete the whatdo

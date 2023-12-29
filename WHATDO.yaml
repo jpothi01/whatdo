@@ -13,5 +13,5 @@ whatdos:
   support-tree:
     summary: Allow tasks file to be split into a file hierarchy
     priority: 1
-  support-tags:
-    priority: 0
+    tags:
+    - future
