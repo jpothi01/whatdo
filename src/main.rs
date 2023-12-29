@@ -93,8 +93,25 @@ enum Command {
         tags: Vec<String>,
     },
 
-    #[command(about = "Alias for 'show --all'")]
-    Ls {},
+    #[command(about = "Alias for 'show'")]
+    Ls {
+        #[arg(help = "ID of the whatdo to show")]
+        id: Option<String>,
+
+        #[arg(
+            short,
+            long,
+            help = "Comma-separated list of tags. Only show whatdos that has one of the given tags"
+        )]
+        tags: Vec<String>,
+
+        #[arg(
+            short,
+            long,
+            help = "Comma-separated list of priorties. Only show whatdos that has one of the given priorities"
+        )]
+        priorities: Vec<i64>,
+    },
     #[command(about = "Alias for 'delete'")]
     Rm { id: String },
     #[command(about = "Delete a whatdo")]
@@ -300,7 +317,11 @@ fn main() -> Result<()> {
         Some(Command::Delete { id }) => delete(&id),
         Some(Command::Rm { id }) => delete(&id),
         Some(Command::Resolve { id }) => resolve(&id),
-        Some(Command::Ls {}) => next(false, true, None, vec![]),
+        Some(Command::Ls {
+            id,
+            tags,
+            priorities,
+        }) => show(id, tags, priorities),
         Some(Command::Status {}) => status(),
         None => status(),
         _ => Ok(()),
