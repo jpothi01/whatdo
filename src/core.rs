@@ -1,16 +1,17 @@
 use super::git;
 use anyhow::{Error, Result};
 use core::fmt;
-use serde_yaml::Mapping;
+use serde_yaml::{Mapping, Number};
 use std::path::PathBuf;
 use std::path::{Component, Path};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Whatdo {
-    id: String,
-    summary: Option<String>,
-    whatdos: Option<Vec<Whatdo>>,
-    queue: Option<Vec<String>>,
+    pub id: String,
+    pub summary: Option<String>,
+    pub whatdos: Option<Vec<Whatdo>>,
+    pub queue: Option<Vec<String>>,
+    pub priority: Option<i64>,
     simple_format: bool,
 }
 
@@ -35,28 +36,33 @@ fn deslugify(s: &str) -> String {
 }
 
 impl Whatdo {
-    pub fn simple<T: Into<String>, U: Into<String>>(id: T, summary: U) -> Self {
+    pub fn simple<T: Into<String>, U: Into<String>>(id: T, summary: Option<U>) -> Self {
         Whatdo {
             id: id.into(),
-            summary: Some(summary.into()),
+            summary: summary.map(|s| s.into()),
             whatdos: None,
             queue: None,
+            priority: None,
             simple_format: true,
         }
     }
 
-    fn summary(&self) -> String {
+    pub fn summary(&self) -> String {
         match &self.summary {
             Some(s) => s.clone(),
             None => deslugify(&self.id),
         }
     }
 
-    fn whatdos(&self) -> Vec<Whatdo> {
+    pub fn whatdos(&self) -> Vec<Whatdo> {
         match &self.whatdos {
             None => Vec::new(),
             Some(wds) => wds.clone(),
         }
+    }
+
+    pub fn detailed_display(&self) -> String {
+        format!("{}", self)
     }
 }
 
@@ -100,7 +106,7 @@ fn parse_queue_sequence(list: serde_yaml::Sequence) -> Result<Vec<String>> {
 
 fn parse_whatdo(id: &str, data: &serde_yaml::Value) -> Result<Whatdo> {
     match data {
-        serde_yaml::Value::String(s) => Ok(Whatdo::simple(id.to_owned(), s.clone())),
+        serde_yaml::Value::String(s) => Ok(Whatdo::simple(id.to_owned(), Some(s.clone()))),
         serde_yaml::Value::Mapping(items) => {
             let summary = match items.get("summary") {
                 None => None,
@@ -123,12 +129,23 @@ fn parse_whatdo(id: &str, data: &serde_yaml::Value) -> Result<Whatdo> {
                     _ => return Err(Error::msg("Expected 'queue' to be a sequence")),
                 },
             };
+            let priority = match items.get("priority") {
+                None => None,
+                Some(p) => match p {
+                    serde_yaml::Value::Number(n) => match n.as_i64() {
+                        None => return Err(Error::msg("Expected 'priority' to be an integer")),
+                        Some(n) => Some(n),
+                    },
+                    _ => return Err(Error::msg("Expected 'priority' to be a number")),
+                },
+            };
 
             Ok(Whatdo {
                 id: String::from(id),
                 summary: summary.cloned(),
                 whatdos: whatdos_map.map(parse_whatdo_map).transpose()?,
                 queue: queue_sequence.map(parse_queue_sequence).transpose()?,
+                priority,
                 simple_format: false,
             })
         }
@@ -202,6 +219,13 @@ fn serialize_whatdo(whatdo: &Whatdo) -> (serde_yaml::Value, serde_yaml::Value) {
         }
     }
 
+    if let Some(priority) = whatdo.priority {
+        mapping.insert(
+            serde_yaml::Value::String(String::from("priority")),
+            serde_yaml::Value::Number(Number::from(priority)),
+        );
+    }
+
     return (
         serde_yaml::Value::String(whatdo.id.clone()),
         serde_yaml::Value::Mapping(mapping),
@@ -250,9 +274,21 @@ fn next_whatdo(wd: &Whatdo) -> Option<Whatdo> {
     return next_whatdo(&whatdos[0]);
 }
 
-pub fn add(id: &str, summary: &str) -> Result<()> {
+pub fn add(
+    id: &str,
+    tags: Vec<String>,
+    summary: Option<&str>,
+    priority: Option<i64>,
+) -> Result<()> {
     let mut whatdo = read_current_file()?;
-    let new_whatdo = Whatdo::simple(id, summary);
+    let new_whatdo = Whatdo {
+        id: id.to_owned(),
+        summary: summary.map(|s| s.to_owned()),
+        simple_format: false,
+        queue: None,
+        whatdos: None,
+        priority,
+    };
     if whatdo.whatdos.is_none() {
         whatdo.whatdos = Some(Vec::new());
     }
@@ -260,10 +296,6 @@ pub fn add(id: &str, summary: &str) -> Result<()> {
     write_to_file(&whatdo)?;
 
     Ok(())
-}
-
-pub fn list() {
-    println!("list")
 }
 
 pub fn next() -> Result<Option<Whatdo>> {
@@ -278,6 +310,12 @@ pub fn start(wd: &Whatdo) -> Result<()> {
 pub fn get(id: &str) -> Result<Option<Whatdo>> {
     let whatdo = read_current_file()?;
     Ok(find_whatdo(&whatdo, id))
+}
+
+pub fn current() -> Result<Option<Whatdo>> {
+    let whatdo = read_current_file()?;
+    let current_id = git::current_branch()?;
+    Ok(find_whatdo(&whatdo, &current_id))
 }
 
 fn delete_whatdo(whatdo: &Whatdo, id: &str) -> Whatdo {
@@ -344,19 +382,26 @@ for tracking the progress of this tool\n",
                 whatdos: Some(vec![
                     Whatdo::simple(
                         String::from("read-back-whatdos"),
-                        String::from("Ability to invoke `wd` to list the current whatdos"),
+                        Some(String::from(
+                            "Ability to invoke `wd` to list the current whatdos",
+                        )),
                     ),
                     Whatdo {
                         id: String::from("finish-whatdo"),
                         summary: Some(String::from(
                             "Ability to invoke `wd finish` to finish the current whatdo",
                         )),
-                        whatdos: Some(vec![Whatdo::simple("delete-whatdo", "Delete the whatdo")]),
+                        whatdos: Some(vec![Whatdo::simple(
+                            "delete-whatdo",
+                            Some("Delete the whatdo"),
+                        )]),
                         simple_format: false,
                         queue: None,
+                        priority: None,
                     },
                 ]),
                 queue: None,
+                priority: Some(0),
                 simple_format: false,
             }]),
             simple_format: false,
@@ -364,6 +409,7 @@ for tracking the progress of this tool\n",
                 String::from("read-back-whatdos"),
                 String::from("delete-whatdo"),
             ]),
+            priority: None,
         }
     }
 
@@ -379,7 +425,9 @@ for tracking the progress of this tool\n",
             next_whatdo(&test_data_whatdo()),
             Some(Whatdo::simple(
                 String::from("read-back-whatdos"),
-                String::from("Ability to invoke `wd` to list the current whatdos"),
+                Some(String::from(
+                    "Ability to invoke `wd` to list the current whatdos"
+                )),
             ))
         )
     }
@@ -397,13 +445,14 @@ for tracking the progress of this tool\n",
                 whatdos: Some(vec![Whatdo {
                     id: String::from("basic-functionality"),
                     summary: Some(String::from(
-                        "Implement the absolute minimum stuff for the tool to get it to be useful
-for tracking the progress of this tool\n",
+                        "Implement the absolute minimum stuff for the tool to get it to be useful\nfor tracking the progress of this tool\n",
                     )),
                     whatdos: Some(vec![
                         Whatdo::simple(
                             String::from("read-back-whatdos"),
-                            String::from("Ability to invoke `wd` to list the current whatdos"),
+                            Some(String::from(
+                                "Ability to invoke `wd` to list the current whatdos"
+                            )),
                         ),
                         Whatdo {
                             id: String::from("finish-whatdo"),
@@ -413,13 +462,16 @@ for tracking the progress of this tool\n",
                             whatdos: None,
                             simple_format: false,
                             queue: None,
+                            priority: None
                         },
                     ]),
                     queue: None,
+                    priority: Some(0),
                     simple_format: false,
                 }]),
                 simple_format: false,
                 queue: Some(vec![String::from("read-back-whatdos")]),
+                priority: None
             }
         );
         let deleted_again = delete_whatdo(&deleted, "read-back-whatdos");
@@ -433,8 +485,7 @@ for tracking the progress of this tool\n",
                 whatdos: Some(vec![Whatdo {
                     id: String::from("basic-functionality"),
                     summary: Some(String::from(
-                        "Implement the absolute minimum stuff for the tool to get it to be useful
-for tracking the progress of this tool\n",
+                        "Implement the absolute minimum stuff for the tool to get it to be useful\nfor tracking the progress of this tool\n",
                     )),
                     whatdos: Some(vec![Whatdo {
                         id: String::from("finish-whatdo"),
@@ -444,12 +495,15 @@ for tracking the progress of this tool\n",
                         whatdos: None,
                         simple_format: false,
                         queue: None,
+                        priority: None
                     },]),
                     queue: None,
+                    priority: Some(0),
                     simple_format: false,
                 }]),
                 simple_format: false,
-                queue: None
+                queue: None,
+                priority: None
             }
         );
     }
