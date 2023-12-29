@@ -524,22 +524,20 @@ pub enum NextAmount {
     AtMost(usize),
 }
 
-pub fn next(amount: NextAmount, tags: Vec<String>) -> Result<Vec<Whatdo>> {
+pub fn next(amount: NextAmount, tags: Vec<String>, priorities: Vec<i64>) -> Result<Vec<Whatdo>> {
     let root = read_current_file()?;
-    let next_root = if let Some(wd) = current()? {
-        wd
-    } else {
-        root
-    };
+    let next_root = if let Some(wd) = current()? { wd } else { root };
     let sorted = sort_whatdos(
         &next_root,
         &|wd| {
-            tags.len() == 0
+            (tags.len() == 0
                 || wd
                     .tags
                     .as_ref()
                     .map(|ts| tags.iter().find(|t| ts.contains(t)))
-                    .is_some()
+                    .is_some())
+                && (priorities.len() == 0
+                    || (wd.priority.is_some() && priorities.contains(&wd.priority.unwrap())))
         },
         &mut HashSet::new(),
         false,

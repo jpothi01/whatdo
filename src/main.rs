@@ -94,6 +94,13 @@ enum Command {
             help = "Comma-separated list of tags. Only include whatdos with an ancestor that has one of the given tags"
         )]
         tags: Vec<String>,
+
+        #[arg(
+            short,
+            long,
+            help = "Comma-separated list of priorties. Only include whatdos that has one of the given priorities"
+        )]
+        priorities: Vec<i64>,
     },
 
     #[command(about = "Alias for 'show'")]
@@ -116,7 +123,12 @@ enum Command {
         priorities: Vec<i64>,
     },
     #[command(about = "Alias for 'delete'")]
-    Rm { id: String },
+    Rm {
+        id: String,
+
+        #[arg(long, help = "Don't commit the change to the git repo, if applicable")]
+        no_commit: bool,
+    },
     #[command(about = "Delete a whatdo")]
     Delete {
         id: String,
@@ -137,7 +149,19 @@ enum Command {
     #[command(
         about = "Finish the current whatdo by resolving it and committing to the active branch"
     )]
-    Finish {},
+    Finish {
+        #[arg(
+            long,
+            help = "Don't commit the change to the git repo, if applicable. Implies --no-merge"
+        )]
+        no_commit: bool,
+
+        #[arg(
+            long,
+            help = "Don't merge to the main branch after committing, if applicable"
+        )]
+        no_merge: bool,
+    },
 
     #[command(about = "Display the active whatdo and the next few to do")]
     Status {},
@@ -211,7 +235,13 @@ fn show(id: Option<String>, tags: Vec<String>, priorities: Vec<i64>) -> Result<(
     Ok(())
 }
 
-fn next(start: bool, all: bool, n: Option<usize>, tags: Vec<String>) -> Result<()> {
+fn next(
+    start: bool,
+    all: bool,
+    n: Option<usize>,
+    tags: Vec<String>,
+    priorities: Vec<i64>,
+) -> Result<()> {
     if start && (all || n.filter(|n| n != &1).is_some()) {
         return Err(Error::msg("Cannot specify both --start and --all or -n"));
     }
@@ -222,7 +252,7 @@ fn next(start: bool, all: bool, n: Option<usize>, tags: Vec<String>) -> Result<(
         NextAmount::AtMost(n.unwrap_or(1usize))
     };
 
-    let whatdos = core::next(next_amount, tags)?;
+    let whatdos = core::next(next_amount, tags, priorities)?;
     if start {
         if whatdos.len() == 0 {
             println!("No whatdos to start");
@@ -325,11 +355,15 @@ fn main() -> Result<()> {
             all,
             n,
             tags,
-        }) => next(start, all, n, tags),
+            priorities,
+        }) => next(start, all, n, tags, priorities),
         Some(Command::Start { id }) => start(&id),
-        Some(Command::Finish {}) => finish(),
+        Some(Command::Finish {
+            no_commit,
+            no_merge,
+        }) => finish(),
         Some(Command::Delete { id, no_commit }) => delete(&id),
-        Some(Command::Rm { id }) => delete(&id),
+        Some(Command::Rm { id, no_commit }) => delete(&id),
         Some(Command::Resolve { id, no_commit }) => resolve(&id),
         Some(Command::Ls {
             id,
