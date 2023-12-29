@@ -525,9 +525,14 @@ pub enum NextAmount {
 }
 
 pub fn next(amount: NextAmount, tags: Vec<String>) -> Result<Vec<Whatdo>> {
-    let whatdo = read_current_file()?;
+    let root = read_current_file()?;
+    let next_root = if let Some(wd) = current()? {
+        wd
+    } else {
+        root
+    };
     let sorted = sort_whatdos(
-        &whatdo,
+        &next_root,
         &|wd| {
             tags.len() == 0
                 || wd

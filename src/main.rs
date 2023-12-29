@@ -51,6 +51,9 @@ enum Command {
 
         #[arg(long, help = "ID of the parent whatdo, if any")]
         parent: Option<String>,
+
+        #[arg(long, help = "Don't commit the change to the git repo, if applicable")]
+        no_commit: bool,
     },
     #[command(about = "Show all whatdos or a specific whatdo")]
     Show {
@@ -115,9 +118,19 @@ enum Command {
     #[command(about = "Alias for 'delete'")]
     Rm { id: String },
     #[command(about = "Delete a whatdo")]
-    Delete { id: String },
+    Delete {
+        id: String,
+
+        #[arg(long, help = "Don't commit the change to the git repo, if applicable")]
+        no_commit: bool,
+    },
     #[command(about = "Mark a whatdo as 'done'. That is, delete it and receive congratulations")]
-    Resolve { id: String },
+    Resolve {
+        id: String,
+
+        #[arg(long, help = "Don't commit the change to the git repo, if applicable")]
+        no_commit: bool,
+    },
 
     #[command(about = "Start a whatdo by checking out a git branch")]
     Start { id: String },
@@ -300,6 +313,7 @@ fn main() -> Result<()> {
             summary,
             priority,
             parent,
+            no_commit,
         }) => add(id, tags, summary, priority, parent),
         Some(Command::Show {
             id,
@@ -314,9 +328,9 @@ fn main() -> Result<()> {
         }) => next(start, all, n, tags),
         Some(Command::Start { id }) => start(&id),
         Some(Command::Finish {}) => finish(),
-        Some(Command::Delete { id }) => delete(&id),
+        Some(Command::Delete { id, no_commit }) => delete(&id),
         Some(Command::Rm { id }) => delete(&id),
-        Some(Command::Resolve { id }) => resolve(&id),
+        Some(Command::Resolve { id, no_commit }) => resolve(&id),
         Some(Command::Ls {
             id,
             tags,
