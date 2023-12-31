@@ -24,7 +24,7 @@ summary: The tutorial for wd
 queue:
 - setting-up-new-project
 whatdos:
-    # Every task (whatdo) is either a leaf whatdo or has sub-whatdo.
+    # Every task (whatdo) is either a leaf whatdo or has sub-whatdos.
     # This whatdo, called "setting-up-new-project", has sub-whatdos.
     # `wd next` traverses this tree to determine what you should do next
     # based on the queue, the order of sub-whatdos, priority, and tag filters.
