@@ -26,3 +26,5 @@ whatdos:
   support-add-with-parent: {}
   fix-next:
     summary: Exclude current wd from list of next
+  enqueue:
+    summary: Add way to enqueue something in the cli
