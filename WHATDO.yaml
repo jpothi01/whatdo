@@ -39,4 +39,3 @@ whatdos:
       chronological: {}
       blocking-tasks:
         summary: Support notion of one whatdo blocking another in the sort order
-  wd: {}
