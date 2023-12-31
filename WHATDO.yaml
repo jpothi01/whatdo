@@ -24,8 +24,7 @@ whatdos:
     - future
   auto-commit:
     summary: Automatically commit changes to the whatdo file
-    whatdos:
-      option-to-merge-when-finishing: {}
+    whatdos: {}
   enqueue:
     summary: Add way to enqueue something in the cli
   support-created-date:
