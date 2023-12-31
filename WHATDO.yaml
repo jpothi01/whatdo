@@ -44,4 +44,3 @@ whatdos:
         whatdos:
           id-suggestions: {}
           subcommand-suggestions: {}
-  test-start: {}
