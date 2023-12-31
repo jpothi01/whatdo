@@ -1,4 +1,7 @@
 summary: A streamlined git-based tool for task tracking of a project
+queue:
+  - fix-next
+  - enqueue
 whatdos:
   other-ideas:
     summary: Things I might not do

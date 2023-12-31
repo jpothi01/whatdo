@@ -418,21 +418,6 @@ fn find_whatdo(root: &Whatdo, id: &str) -> Option<Whatdo> {
     return None;
 }
 
-fn next_whatdo(wd: &Whatdo) -> Option<Whatdo> {
-    if let Some(queue) = &wd.queue {
-        if queue.len() > 0 {
-            return find_whatdo(wd, &queue[0]);
-        }
-    }
-
-    let whatdos = wd.whatdos();
-    if whatdos.len() == 0 {
-        return Some(wd.clone());
-    }
-
-    return next_whatdo(&whatdos[0]);
-}
-
 /// Return all whatdos descedent from the given whatdo in the order
 /// defined by the prioritization algorithm.
 /// Ignore any whatdos (or whatdo trees) for which filter(wd) returns false
@@ -469,9 +454,9 @@ fn sort_whatdos<F: Fn(&Whatdo) -> bool>(
 
     if let Some(mut whatdos) = wd.whatdos.clone().filter(|wd| wd.len() > 0) {
         whatdos.sort_by(|a, b| match (a.priority, b.priority) {
-            (Some(pa), Some(pb)) => pa.cmp(&pb),
-            (None, Some(_)) => std::cmp::Ordering::Less,
-            (Some(_), None) => std::cmp::Ordering::Greater,
+            (Some(pa), Some(pb)) => pb.cmp(&pa),
+            (None, Some(_)) => std::cmp::Ordering::Greater,
+            (Some(_), None) => std::cmp::Ordering::Less,
             (None, None) => std::cmp::Ordering::Equal,
         });
         for subwhatdo in whatdos {
@@ -666,19 +651,6 @@ for tracking the progress of this tool\n",
     fn test_parse_file() {
         let parsed = parse_file(&PathBuf::from("./test_data/WHATDO.yaml"));
         assert_eq!(parsed.unwrap(), test_data_whatdo());
-    }
-
-    #[test]
-    fn test_next_whatdo() {
-        assert_eq!(
-            next_whatdo(&test_data_whatdo()),
-            Some(Whatdo::simple(
-                String::from("read-back-whatdos"),
-                Some(String::from(
-                    "Ability to invoke `wd` to list the current whatdos"
-                )),
-            ))
-        )
     }
 
     #[test]
