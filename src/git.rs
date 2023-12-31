@@ -21,7 +21,7 @@ fn run_command<'a>(program: &'a str, args: impl IntoIterator<Item = &'a str>) ->
 }
 
 #[cfg(not(debug_assertions))]
-fn run_command(program: &str, args: [&str]) -> Result<String> {
+fn run_command<'a>(program: &'a str, args: impl IntoIterator<Item = &'a str>) -> Result<String> {
     let output = Command::new(program).args(args).output()?;
     let s = String::from_utf8(output.stdout).unwrap().trim().to_owned();
     Ok(s)
