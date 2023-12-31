@@ -53,7 +53,11 @@ pub fn commit(paths: impl IntoIterator<Item = PathBuf>, message: &str, push: boo
 
 fn default_branch_name() -> Result<String> {
     run_command("git", ["remote", "set-head", "origin", "-a"])?;
-    run_command("git", ["rev-parse", "--abbrev-ref", "origin/HEAD"])
+    Ok(String::from_iter(
+        run_command("git", ["rev-parse", "--abbrev-ref", "origin/HEAD"])?
+            .chars()
+            .skip(7),
+    ))
 }
 
 pub fn has_unstaged_changes() -> Result<bool> {
