@@ -499,8 +499,10 @@ pub fn add(
     summary: Option<&str>,
     priority: Option<i64>,
     parent: Option<String>,
+    commit: bool,
 ) -> Result<()> {
-    let mut whatdo = read_current_file()?;
+    let current_file = get_current_file()?;
+    let mut whatdo = parse_file(&current_file)?;
     let new_whatdo = Whatdo {
         id: id.to_owned(),
         summary: summary.map(|s| s.to_owned()),
@@ -515,6 +517,10 @@ pub fn add(
     }
     whatdo.whatdos.as_mut().unwrap().push(new_whatdo);
     write_to_file(&whatdo)?;
+
+    if commit {
+        git::commit([current_file], &format!("Add {} to whatdos", id))?;
+    }
 
     Ok(())
 }
@@ -591,10 +597,14 @@ fn delete_whatdo(whatdo: &Whatdo, id: &str) -> Whatdo {
     return new_whatdo;
 }
 
-pub fn delete(id: &str) -> Result<()> {
-    let whatdo = read_current_file()?;
+pub fn delete(id: &str, commit: bool) -> Result<()> {
+    let current_file = get_current_file()?;
+    let whatdo = parse_file(&current_file)?;
     let new_whatdo = delete_whatdo(&whatdo, id);
     write_to_file(&new_whatdo)?;
+    if commit {
+        git::commit([current_file], &format!("Deleted {} from whatdos", id))?;
+    }
     Ok(())
 }
 

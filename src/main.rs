@@ -180,6 +180,7 @@ fn add(
     summary: Option<String>,
     priority: Option<i64>,
     parent: Option<String>,
+    no_commit: bool,
 ) -> Result<()> {
     core::add(
         &id,
@@ -187,6 +188,7 @@ fn add(
         summary.as_ref().map(|s| s.as_str()),
         priority,
         parent,
+        !no_commit,
     )?;
     Ok(())
 }
@@ -282,12 +284,12 @@ fn start(id: &str) -> Result<()> {
     Ok(())
 }
 
-fn finish() -> Result<()> {
+fn finish(no_commit: bool, no_merge: bool) -> Result<()> {
     let wd = core::current()?;
     match wd {
         None => eprintln!("No current whatdo"),
         Some(wd) => {
-            core::delete(&wd.id)?;
+            core::delete(&wd.id, !no_commit)?;
             println!("Finished {}", wd);
             println!("Congratulations!")
         }
@@ -295,24 +297,24 @@ fn finish() -> Result<()> {
     Ok(())
 }
 
-fn delete(id: &str) -> Result<()> {
+fn delete(id: &str, no_commit: bool) -> Result<()> {
     let wd = core::get(id)?;
     match wd {
         None => eprintln!("Not found"),
         Some(wd) => {
-            core::delete(id)?;
-            println!("Deleted {}", &wd)
+            core::delete(id, !no_commit)?;
+            println!("Deleted {}", &wd);
         }
     }
     Ok(())
 }
 
-fn resolve(id: &str) -> Result<()> {
+fn resolve(id: &str, no_commit: bool) -> Result<()> {
     let wd = core::get(id)?;
     match wd {
         None => eprintln!("Not found"),
         Some(wd) => {
-            core::delete(id)?;
+            core::delete(id, !no_commit)?;
             println!("Deleted {}", &wd);
             println!("Well done!");
         }
@@ -344,7 +346,7 @@ fn main() -> Result<()> {
             priority,
             parent,
             no_commit,
-        }) => add(id, tags, summary, priority, parent),
+        }) => add(id, tags, summary, priority, parent, no_commit),
         Some(Command::Show {
             id,
             tags,
@@ -361,10 +363,10 @@ fn main() -> Result<()> {
         Some(Command::Finish {
             no_commit,
             no_merge,
-        }) => finish(),
-        Some(Command::Delete { id, no_commit }) => delete(&id),
-        Some(Command::Rm { id, no_commit }) => delete(&id),
-        Some(Command::Resolve { id, no_commit }) => resolve(&id),
+        }) => finish(no_commit, no_merge),
+        Some(Command::Delete { id, no_commit }) => delete(&id, no_commit),
+        Some(Command::Rm { id, no_commit }) => delete(&id, no_commit),
+        Some(Command::Resolve { id, no_commit }) => resolve(&id, no_commit),
         Some(Command::Ls {
             id,
             tags,
