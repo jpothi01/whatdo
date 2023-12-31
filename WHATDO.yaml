@@ -25,4 +25,3 @@ whatdos:
       commit-file-changes: {}
       option-to-merge-when-finishing: {}
   support-add-with-parent: {}
-  test-commit: {}
