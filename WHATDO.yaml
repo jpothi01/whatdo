@@ -24,3 +24,5 @@ whatdos:
     whatdos:
       option-to-merge-when-finishing: {}
   support-add-with-parent: {}
+  fix-next:
+    summary: Exclude current wd from list of next
