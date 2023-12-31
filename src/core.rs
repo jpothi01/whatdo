@@ -342,31 +342,6 @@ fn serialize_whatdo(whatdo: &Whatdo) -> (serde_yaml::Value, serde_yaml::Value) {
         );
     }
 
-    if let Some(whatdos) = whatdo.whatdos.clone() {
-        let mut whatdo_mapping = serde_yaml::Mapping::new();
-        for subwhatdo in &whatdos {
-            let (k, v) = serialize_whatdo(&subwhatdo);
-            whatdo_mapping.insert(k, v);
-        }
-
-        mapping.insert(
-            serde_yaml::Value::String(String::from("whatdos")),
-            serde_yaml::Value::Mapping(whatdo_mapping),
-        );
-    }
-
-    if let Some(queue) = whatdo.queue.clone() {
-        mapping.insert(
-            serde_yaml::Value::String(String::from("queue")),
-            serde_yaml::Value::Sequence(
-                queue
-                    .into_iter()
-                    .map(|i| serde_yaml::Value::String(i))
-                    .collect(),
-            ),
-        );
-    }
-
     if let Some(priority) = whatdo.priority {
         mapping.insert(
             serde_yaml::Value::String(String::from("priority")),
@@ -382,6 +357,30 @@ fn serialize_whatdo(whatdo: &Whatdo) -> (serde_yaml::Value, serde_yaml::Value) {
                     .map(|i| serde_yaml::Value::String(i))
                     .collect(),
             ),
+        );
+    }
+    if let Some(queue) = whatdo.queue.clone() {
+        mapping.insert(
+            serde_yaml::Value::String(String::from("queue")),
+            serde_yaml::Value::Sequence(
+                queue
+                    .into_iter()
+                    .map(|i| serde_yaml::Value::String(i))
+                    .collect(),
+            ),
+        );
+    }
+
+    if let Some(whatdos) = whatdo.whatdos.clone() {
+        let mut whatdo_mapping = serde_yaml::Mapping::new();
+        for subwhatdo in &whatdos {
+            let (k, v) = serialize_whatdo(&subwhatdo);
+            whatdo_mapping.insert(k, v);
+        }
+
+        mapping.insert(
+            serde_yaml::Value::String(String::from("whatdos")),
+            serde_yaml::Value::Mapping(whatdo_mapping),
         );
     }
 
