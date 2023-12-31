@@ -51,6 +51,9 @@ enum Command {
         #[arg(long, help = "ID of the parent whatdo, if any")]
         parent: Option<String>,
 
+        #[arg(long, help = "Automatically start the whatdo")]
+        start: bool,
+
         #[arg(long, help = "Don't commit the change to the git repo, if applicable")]
         no_commit: bool,
     },
@@ -179,6 +182,7 @@ fn add(
     summary: Option<String>,
     priority: Option<i64>,
     parent: Option<String>,
+    start: bool,
     no_commit: bool,
 ) -> Result<()> {
     let (new, parent) = core::add(
@@ -196,6 +200,12 @@ fn add(
         println!("");
         println!("Parent:");
         println!("{}", parent);
+    }
+
+    if start {
+        core::start(&new)?;
+        println!("Started:");
+        println!("{}", new);
     }
 
     Ok(())
@@ -373,8 +383,9 @@ fn main() -> Result<()> {
             summary,
             priority,
             parent,
+            start,
             no_commit,
-        }) => add(id, tags, summary, priority, parent, no_commit),
+        }) => add(id, tags, summary, priority, parent, start, no_commit),
         Some(Command::Show {
             id,
             tags,

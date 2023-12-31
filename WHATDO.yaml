@@ -34,6 +34,7 @@ whatdos:
     - pretty
   cli-enhancements:
     whatdos:
+      add-start: "`wd add <id> --start`"
       enqueue:
         summary: Add way to enqueue something in the cli
       modify-whatdo:
