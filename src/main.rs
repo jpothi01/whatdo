@@ -331,6 +331,18 @@ fn status() -> Result<()> {
         }
     }
 
+    println!("");
+
+    let wds = core::next(NextAmount::AtMost(10), vec![], vec![])?;
+    if wds.len() > 0 {
+        println!("Next few whatdos:");
+        for wd in wds {
+            println!("{}", wd);
+        }
+    } else {
+        println!("No whatdos coming up. Add some with `wd add`!");
+    }
+
     Ok(())
 }
 
