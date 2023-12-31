@@ -204,6 +204,7 @@ fn add(
 
     if start {
         core::start(&new)?;
+        println!("");
         println!("Started:");
         println!("{}", new);
     }
