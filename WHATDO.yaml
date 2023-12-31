@@ -45,3 +45,4 @@ whatdos:
   cli-enhancements:
     whatdos:
       modify-whatdo: {}
+      reparent-whatdo: {}
