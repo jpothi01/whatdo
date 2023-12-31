@@ -34,13 +34,12 @@ whatdos:
     - pretty
   cli-enhancements:
     whatdos:
-      add-start: "`wd add <id> --start`"
       enqueue:
         summary: Add way to enqueue something in the cli
       modify-whatdo:
-        summary: "`wd edit <id>`"
+        summary: '`wd edit <id>`'
       reparent-whatdo:
-        summary: "`wd mv <id>` or `wd <id> edit --parent <id>"
+        summary: '`wd mv <id>` or `wd <id> edit --parent <id>'
       bash-completions:
         whatdos:
           id-suggestions: {}
