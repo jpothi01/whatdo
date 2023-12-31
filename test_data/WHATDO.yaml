@@ -1,0 +1,17 @@
+summary: A streamlined git-based tool for task tracking of a project
+queue:
+  - read-back-whatdos
+  - delete-whatdo
+whatdos:
+  basic-functionality:
+    summary: |
+      Implement the absolute minimum stuff for the tool to get it to be useful
+      for tracking the progress of this tool
+    priority: 0
+    whatdos:
+      read-back-whatdos: Ability to invoke `wd` to list the current whatdos
+      finish-whatdo: 
+        summary: Ability to invoke `wd finish` to finish the current whatdo
+        tags: [a-tag]
+        whatdos:
+          delete-whatdo: Delete the whatdo

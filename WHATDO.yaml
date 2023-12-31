@@ -1,0 +1,46 @@
+summary: A streamlined git-based tool for task tracking of a project
+queue:
+- enqueue
+whatdos:
+  other-ideas:
+    summary: Things I might not do
+    priority: 2
+    whatdos:
+      whatdo-switch: Switch to a different whatdo while working on a different one
+  tweaks:
+    summary: Simple things I might do
+    priority: 2
+    whatdos:
+      support-arbirtrary-file: wd [--file|-f] <path-to-yaml-file>
+  support-tree:
+    summary: Allow tasks file to be split into a file hierarchy
+    priority: 1
+    tags:
+    - future
+  support-created-date:
+    priority: 2
+  outside-git:
+    summary: Support having the whatdo file outside the git repo
+    tags:
+    - future
+  sort-orders:
+    whatdos:
+      random: {}
+      chronological: {}
+      blocking-tasks:
+        summary: Support notion of one whatdo blocking another in the sort order
+  colored-tree:
+    tags:
+    - pretty
+  cli-enhancements:
+    whatdos:
+      enqueue:
+        summary: Add way to enqueue something in the cli
+      modify-whatdo:
+        summary: '`wd edit <id>`'
+      reparent-whatdo:
+        summary: '`wd mv <id>` or `wd <id> edit --parent <id>'
+      bash-completions:
+        whatdos:
+          id-suggestions: {}
+          subcommand-suggestions: {}
