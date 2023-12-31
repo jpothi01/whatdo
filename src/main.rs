@@ -63,14 +63,14 @@ enum Command {
         #[arg(
             short,
             long,
-            help = "Comma-separated list of tags. Only show whatdos that has one of the given tags"
+            help = "Comma-separated list of tags. Only show whatdos that have one of the given tags"
         )]
         tags: Vec<String>,
 
         #[arg(
             short,
             long,
-            help = "Comma-separated list of priorties. Only show whatdos that has one of the given priorities"
+            help = "Comma-separated list of priorties. Only show whatdos that have one of the given priorities"
         )]
         priorities: Vec<i64>,
     },
@@ -92,14 +92,14 @@ enum Command {
         #[arg(
             short,
             long,
-            help = "Comma-separated list of tags. Only include whatdos with an ancestor that has one of the given tags"
+            help = "Comma-separated list of tags. Only include whatdos with an ancestor that have one of the given tags"
         )]
         tags: Vec<String>,
 
         #[arg(
             short,
             long,
-            help = "Comma-separated list of priorties. Only include whatdos that has one of the given priorities"
+            help = "Comma-separated list of priorties. Only include whatdos that have one of the given priorities"
         )]
         priorities: Vec<i64>,
     },
@@ -112,14 +112,14 @@ enum Command {
         #[arg(
             short,
             long,
-            help = "Comma-separated list of tags. Only show whatdos that has one of the given tags"
+            help = "Comma-separated list of tags. Only show whatdos that have one of the given tags"
         )]
         tags: Vec<String>,
 
         #[arg(
             short,
             long,
-            help = "Comma-separated list of priorties. Only show whatdos that has one of the given priorities"
+            help = "Comma-separated list of priorties. Only show whatdos that have one of the given priorities"
         )]
         priorities: Vec<i64>,
     },
