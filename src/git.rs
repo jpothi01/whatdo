@@ -11,10 +11,12 @@ fn run_command<'a>(program: &'a str, args: impl IntoIterator<Item = &'a str>) ->
     for arg in &args_vec {
         print!(" {}", arg);
     }
+    println!();
 
     let output = Command::new(program).args(args_vec).output()?;
     let s = String::from_utf8(output.stdout).unwrap().trim().to_owned();
     println!("{}", s);
+    println!("---");
     Ok(s)
 }
 
