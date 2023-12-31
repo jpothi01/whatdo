@@ -30,3 +30,4 @@ whatdos:
     summary: Add way to enqueue something in the cli
   support-created-date:
     priority: 2
+  test-2: {}
