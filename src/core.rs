@@ -178,12 +178,28 @@ impl<'a> fmt::Display for WhatdoTreeView {
 static TAG_RE: Lazy<regex::Regex> = Lazy::new(|| regex::Regex::new("^[a-z0-9-_]+$").unwrap());
 static ID_RE: Lazy<regex::Regex> = Lazy::new(|| regex::Regex::new("^[a-zA-Z0-9-_/]+$").unwrap());
 
+fn validate_tag(tag: &str) -> Result<String> {
+    if !TAG_RE.is_match(tag) {
+        return Err(Error::msg("Tag must be of the form [a-z0-9-_]+"));
+    }
+
+    Ok(tag.to_owned())
+}
+
+fn validate_id(id: &str) -> Result<String> {
+    if !ID_RE.is_match(id) {
+        return Err(Error::msg("ID must be of the form [a-zA-Z0-9-_/]+"));
+    }
+
+    Ok(id.to_owned())
+}
+
 fn valid_tag(tag: &str) -> bool {
-    return TAG_RE.is_match(tag);
+    validate_tag(tag).is_ok()
 }
 
 fn valid_id(id: &str) -> bool {
-    return ID_RE.is_match(id);
+    validate_id(id).is_ok()
 }
 
 fn get_project_name(path: &Path) -> Result<String> {
@@ -502,13 +518,21 @@ pub fn add(
 ) -> Result<()> {
     let current_file = get_current_file()?;
     let mut whatdo = parse_file(&current_file)?;
+    let validated_tags = tags
+        .iter()
+        .map(|t| validate_tag(&t))
+        .collect::<Result<Vec<String>>>()?;
     let new_whatdo = Whatdo {
-        id: id.to_owned(),
+        id: validate_id(id)?,
         summary: summary.map(|s| s.to_owned()),
         simple_format: false,
         queue: None,
         whatdos: None,
-        tags: if tags.len() > 0 { Some(tags) } else { None },
+        tags: if tags.len() > 0 {
+            Some(validated_tags)
+        } else {
+            None
+        },
         priority,
     };
     if whatdo.whatdos.is_none() {

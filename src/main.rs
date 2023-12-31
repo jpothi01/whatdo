@@ -20,7 +20,6 @@ mod git;
 
 #[derive(Subcommand, Debug, Clone)]
 enum Command {
-    // Add a new whatdo
     #[command(about = "Add a new whatdo")]
     Add {
         #[arg(
@@ -55,6 +54,7 @@ enum Command {
         #[arg(long, help = "Don't commit the change to the git repo, if applicable")]
         no_commit: bool,
     },
+
     #[command(about = "Show all whatdos or a specific whatdo")]
     Show {
         #[arg(help = "ID of the whatdo to show")]
@@ -74,6 +74,7 @@ enum Command {
         )]
         priorities: Vec<i64>,
     },
+
     #[command(about = "Show the next whatdo in the queue")]
     Next {
         #[clap(
@@ -122,6 +123,7 @@ enum Command {
         )]
         priorities: Vec<i64>,
     },
+
     #[command(about = "Alias for 'delete'")]
     Rm {
         id: String,
@@ -129,6 +131,7 @@ enum Command {
         #[arg(long, help = "Don't commit the change to the git repo, if applicable")]
         no_commit: bool,
     },
+
     #[command(about = "Delete a whatdo")]
     Delete {
         id: String,
@@ -136,6 +139,7 @@ enum Command {
         #[arg(long, help = "Don't commit the change to the git repo, if applicable")]
         no_commit: bool,
     },
+
     #[command(about = "Mark a whatdo as 'done'. That is, delete it and receive congratulations")]
     Resolve {
         id: String,
@@ -146,20 +150,15 @@ enum Command {
 
     #[command(about = "Start a whatdo by checking out a git branch")]
     Start { id: String },
+
     #[command(
-        about = "Finish the current whatdo by resolving it and committing to the active branch"
+        about = "Finish the current whatdo by resolving it then merging with the parent branch"
     )]
     Finish {
-        #[arg(
-            long,
-            help = "Don't commit the change to the git repo, if applicable. Implies --no-merge"
-        )]
+        #[arg(long, help = "Don't commit the whatdo change to the git repo")]
         no_commit: bool,
 
-        #[arg(
-            long,
-            help = "Don't merge to the main branch after committing, if applicable"
-        )]
+        #[arg(long, help = "Don't merge to the parent branch after committing")]
         no_merge: bool,
     },
 
