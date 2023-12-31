@@ -181,7 +181,7 @@ fn add(
     parent: Option<String>,
     no_commit: bool,
 ) -> Result<()> {
-    core::add(
+    let (new, parent) = core::add(
         &id,
         tags,
         summary.as_ref().map(|s| s.as_str()),
@@ -189,6 +189,15 @@ fn add(
         parent,
         !no_commit,
     )?;
+    println!("Added:");
+    println!("{}", new);
+
+    if let Some(parent) = parent {
+        println!("");
+        println!("Parent:");
+        println!("{}", parent);
+    }
+
     Ok(())
 }
 
@@ -260,7 +269,8 @@ fn next(
         } else {
             let wd = &whatdos[0];
             core::start(wd)?;
-            println!("Starting {}", wd)
+            println!("Started:");
+            println!("{}", wd);
         }
     } else {
         for wd in whatdos {
@@ -277,7 +287,8 @@ fn start(id: &str) -> Result<()> {
         None => eprintln!("Not found"),
         Some(wd) => {
             core::start(&wd)?;
-            println!("Starting {}", wd)
+            println!("Started:");
+            println!("{}", wd);
         }
     }
     Ok(())
@@ -289,7 +300,8 @@ fn finish(no_commit: bool, no_merge: bool) -> Result<()> {
         None => eprintln!("No current whatdo"),
         Some(wd) => {
             core::resolve(&wd.id, !no_commit, !no_merge)?;
-            println!("Finished {}", wd);
+            println!("Finished:");
+            println!("{}", wd);
             println!("Congratulations!")
         }
     }
@@ -302,7 +314,8 @@ fn delete(id: &str, no_commit: bool) -> Result<()> {
         None => eprintln!("Not found"),
         Some(wd) => {
             core::delete(id, !no_commit)?;
-            println!("Deleted {}", &wd);
+            println!("Deleted:");
+            println!("{}", wd);
         }
     }
     Ok(())
@@ -314,7 +327,8 @@ fn resolve(id: &str, no_commit: bool) -> Result<()> {
         None => eprintln!("Not found"),
         Some(wd) => {
             core::resolve(&wd.id, !no_commit, false)?;
-            println!("Deleted {}", &wd);
+            println!("Deleted:");
+            println!("{}", wd);
             println!("Well done!");
         }
     }

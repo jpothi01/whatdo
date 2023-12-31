@@ -436,15 +436,32 @@ fn find_whatdo_and_parent<'a, 'b>(
     return None;
 }
 
+fn find_whatdo_mut<'a, 'b>(root: &'a mut Whatdo, id: &'b str) -> Option<&'a mut Whatdo> {
+    if root.id == id {
+        return Some(root);
+    }
+
+    let whatdos = match &mut root.whatdos {
+        None => return None,
+        Some(wds) => wds,
+    };
+
+    for wd in whatdos {
+        if let Some(wd) = find_whatdo_mut(wd, id) {
+            return Some(wd);
+        }
+    }
+
+    return None;
+}
+
 fn find_whatdo(root: &Whatdo, id: &str) -> Option<Whatdo> {
-    return find_whatdo_and_parent(root, id)
-        .map(|(wd, parent)| wd)
-        .cloned();
+    return find_whatdo_and_parent(root, id).map(|(wd, _)| wd).cloned();
 }
 
 fn find_parent(root: &Whatdo, id: &str) -> Option<Whatdo> {
     return find_whatdo_and_parent(root, id)
-        .and_then(|(wd, parent)| parent)
+        .and_then(|(_, parent)| parent)
         .cloned();
 }
 
@@ -513,15 +530,17 @@ pub fn add(
     tags: Vec<String>,
     summary: Option<&str>,
     priority: Option<i64>,
-    parent: Option<String>,
+    parent_id: Option<String>,
     commit: bool,
-) -> Result<()> {
+) -> Result<(Whatdo, Option<Whatdo>)> {
     let current_file = get_current_file()?;
     let mut whatdo = parse_file(&current_file)?;
+
     let validated_tags = tags
         .iter()
         .map(|t| validate_tag(&t))
         .collect::<Result<Vec<String>>>()?;
+
     let new_whatdo = Whatdo {
         id: validate_id(id)?,
         summary: summary.map(|s| s.to_owned()),
@@ -535,17 +554,36 @@ pub fn add(
         },
         priority,
     };
-    if whatdo.whatdos.is_none() {
-        whatdo.whatdos = Some(Vec::new());
-    }
-    whatdo.whatdos.as_mut().unwrap().push(new_whatdo);
-    write_to_file(&whatdo)?;
+
+    let parent = {
+        let parent_wd = if let Some(parent_id) = &parent_id {
+            let normalized_parent_id = match parent_id.as_str() {
+                "@" => match current()? {
+                    None => return Err(Error::msg("No current whatdo to add to")),
+                    Some(wd) => wd.id,
+                },
+                _ => parent_id.clone(),
+            };
+            match find_whatdo_mut(&mut whatdo, &normalized_parent_id) {
+                Some(wd) => wd,
+                None => return Err(Error::msg("Parent not found")),
+            }
+        } else {
+            &mut whatdo
+        };
+        if parent_wd.whatdos.is_none() {
+            parent_wd.whatdos = Some(Vec::new());
+        }
+        parent_wd.whatdos.as_mut().unwrap().push(new_whatdo.clone());
+        parent_id.map(|_| parent_wd).cloned()
+    };
+    write_to_file(&mut whatdo)?;
 
     if commit {
         git::commit([current_file], &format!("Add {} to whatdos", id), true)?;
     }
 
-    Ok(())
+    Ok((new_whatdo, parent))
 }
 
 pub enum NextAmount {
