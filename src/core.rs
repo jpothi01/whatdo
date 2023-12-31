@@ -689,6 +689,11 @@ pub fn resolve(id: &str, commit: bool, merge: bool) -> Result<()> {
     let target_branch = current_wd
         .and_then(|wd| find_parent(&whatdo, &wd.id))
         .map(|p| p.id);
+    if merge && git::has_unstaged_changes()? {
+        return Err(Error::msg(
+            "You have unstaged changes. Commit or revert them before finishing whatdo",
+        ));
+    }
     let new_whatdo = delete_whatdo(&whatdo, id);
     write_to_file(&new_whatdo)?;
     if commit {

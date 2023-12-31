@@ -302,6 +302,7 @@ fn finish(no_commit: bool, no_merge: bool) -> Result<()> {
             core::resolve(&wd.id, !no_commit, !no_merge)?;
             println!("Finished:");
             println!("{}", wd);
+            println!("");
             println!("Congratulations!")
         }
     }

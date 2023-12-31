@@ -4,59 +4,63 @@ use std::{
     process::Command,
 };
 
+#[cfg(debug_assertions)]
+fn run_command<'a>(program: &'a str, args: impl IntoIterator<Item = &'a str>) -> Result<String> {
+    let output = Command::new(program).args(args).output()?;
+    let s = String::from_utf8(output.stdout).unwrap().trim().to_owned();
+    println!("{}", s);
+    Ok(s)
+}
+
+#[cfg(not(debug_assertions))]
+fn run_command(program: &str, args: [&str]) -> Result<String> {
+    let output = Command::new(program).args(args).output()?;
+    let s = String::from_utf8(output.stdout).unwrap().trim().to_owned();
+    Ok(s)
+}
+
 pub fn get_root() -> Result<PathBuf> {
-    let output = Command::new("git")
-        .args(["rev-parse", "--show-toplevel"])
-        .output()?;
-    return Ok(PathBuf::from(
-        &String::from_utf8(output.stdout).unwrap().trim(),
-    ));
+    Ok(PathBuf::from(run_command(
+        "git",
+        ["rev-parse", "--show-toplevel"],
+    )?))
 }
 
 pub fn checkout_new_branch(name: &str, push: bool) -> Result<()> {
-    Command::new("git")
-        .args(["checkout", "-b", name])
-        .output()?;
+    run_command("git", ["checkout", "-b", name])?;
     if push {
-        Command::new("git")
-            .args(["push", "-u", "origin", name])
-            .output()?;
+        run_command("git", ["push", "-u", "origin", name])?;
     }
 
     Ok(())
 }
 
 pub fn current_branch() -> Result<String> {
-    let output = Command::new("git")
-        .args(["rev-parse", "--abbrev-ref", "HEAD"])
-        .output()?;
-    Ok(String::from_utf8(output.stdout).unwrap().trim().to_owned())
+    run_command("git", ["rev-parse", "--abbrev-ref", "HEAD"])
 }
 
 pub fn commit(paths: impl IntoIterator<Item = PathBuf>, message: &str, push: bool) -> Result<()> {
-    Command::new("git").args(["reset"]).output()?;
+    run_command("git", ["reset"])?;
     for path in paths.into_iter() {
-        Command::new("git")
-            .args(["add", &path.to_string_lossy()])
-            .output()?;
+        run_command("git", ["add", &path.to_string_lossy()])?;
     }
-    Command::new("git")
-        .args(["commit", "-m", message])
-        .output()?;
+    run_command("git", ["commit", "-m", message])?;
     if push {
-        Command::new("git").args(["push"]).output()?;
+        run_command("git", ["push"])?;
     }
     Ok(())
 }
 
 fn default_branch_name() -> Result<String> {
-    Command::new("git")
-        .args(["remote", "set-head", "origin", "-a"])
-        .output()?;
-    let output = Command::new("git")
-        .args(["rev-parse", "--abbrev-ref", "origin/HEAD"])
-        .output()?;
-    return Ok(String::from_utf8(output.stdout).unwrap().trim().into());
+    run_command("git", ["remote", "set-head", "origin", "-a"])?;
+    run_command("git", ["rev-parse", "--abbrev-ref", "origin/HEAD"])
+}
+
+pub fn has_unstaged_changes() -> Result<bool> {
+    return Ok(run_command("git", ["status", "--porcelain=v1"])?
+        .trim()
+        .len()
+        > 0);
 }
 
 pub fn merge(target_branch: Option<&str>, push: bool) -> Result<()> {
@@ -66,19 +70,15 @@ pub fn merge(target_branch: Option<&str>, push: bool) -> Result<()> {
         default_branch_name()?
     };
     let current_branch_name = current_branch()?;
-    Command::new("git")
-        .args(["checkout", &target_branch_name])
-        .output()?;
-    Command::new("git")
-        .args(["merge", &current_branch_name])
-        .output()?;
+    run_command("git", ["checkout", &target_branch_name])?;
+    run_command("git", ["merge", &current_branch_name])?;
     if push {
-        Command::new("git").args(["push"]).output()?;
+        run_command("git", ["push"])?;
     }
     Ok(())
 }
 
 pub fn push() -> Result<()> {
-    Command::new("git").args(["push"]).output()?;
+    run_command("git", ["push"])?;
     Ok(())
 }
