@@ -22,6 +22,5 @@ whatdos:
   auto-commit:
     summary: Automatically commit changes to the whatdo file
     whatdos:
-      commit-file-changes: {}
       option-to-merge-when-finishing: {}
   support-add-with-parent: {}
