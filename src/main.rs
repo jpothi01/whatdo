@@ -327,7 +327,7 @@ fn resolve(id: &str, no_commit: bool) -> Result<()> {
         None => eprintln!("Not found"),
         Some(wd) => {
             core::resolve(&wd.id, !no_commit, false)?;
-            println!("Deleted:");
+            println!("Resolved:");
             println!("{}", wd);
             println!("Well done!");
         }
