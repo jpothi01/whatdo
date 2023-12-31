@@ -36,3 +36,4 @@ whatdos:
   sort-orders:
     whatdos:
       random: {}
+      chronological: {}
