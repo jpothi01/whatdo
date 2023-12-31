@@ -33,4 +33,6 @@ whatdos:
     summary: Support having the whatdo file outside the git repo
     tags:
     - future
-  sort-orders: {}
+  sort-orders:
+    whatdos:
+      random: {}
