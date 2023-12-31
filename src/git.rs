@@ -6,9 +6,17 @@ use std::{
 
 #[cfg(debug_assertions)]
 fn run_command<'a>(program: &'a str, args: impl IntoIterator<Item = &'a str>) -> Result<String> {
-    let output = Command::new(program).args(args).output()?;
+    let args_vec: Vec<&str> = args.into_iter().collect();
+    print!("{}", program);
+    for arg in &args_vec {
+        print!(" {}", arg);
+    }
+    println!();
+
+    let output = Command::new(program).args(args_vec).output()?;
     let s = String::from_utf8(output.stdout).unwrap().trim().to_owned();
     println!("{}", s);
+    println!("---");
     Ok(s)
 }
 

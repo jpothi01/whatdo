@@ -688,7 +688,13 @@ pub fn resolve(id: &str, commit: bool, merge: bool) -> Result<()> {
     let current_wd = current()?;
     let target_branch = current_wd
         .and_then(|wd| find_parent(&whatdo, &wd.id))
-        .map(|p| p.id);
+        .and_then(|p| {
+            if p.id == whatdo.id {
+                None
+            } else {
+                Some(p.id.clone())
+            }
+        });
     if merge && git::has_unstaged_changes()? {
         return Err(Error::msg(
             "You have unstaged changes. Commit or revert them before finishing whatdo",
