@@ -214,7 +214,7 @@ fn show(id: Option<String>, tags: Vec<String>, priorities: Vec<i64>) -> Result<(
         let wd = core::get(&id)?;
         match wd {
             None => eprintln!("Not found"),
-            Some(wd) => {
+            Some(_) => {
                 print!(
                     "{}",
                     WhatdoTreeView {
@@ -401,6 +401,5 @@ fn main() -> Result<()> {
         }) => show(id, tags, priorities),
         Some(Command::Status {}) => status(),
         None => status(),
-        _ => Ok(()),
     }
 }

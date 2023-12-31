@@ -1,8 +1,5 @@
 use anyhow::Result;
-use std::{
-    path::{Path, PathBuf},
-    process::Command,
-};
+use std::{path::PathBuf, process::Command};
 
 #[cfg(debug_assertions)]
 fn run_command<'a>(program: &'a str, args: impl IntoIterator<Item = &'a str>) -> Result<String> {
@@ -87,10 +84,5 @@ pub fn merge(target_branch: Option<&str>, push: bool) -> Result<()> {
     if push {
         run_command("git", ["push"])?;
     }
-    Ok(())
-}
-
-pub fn push() -> Result<()> {
-    run_command("git", ["push"])?;
     Ok(())
 }

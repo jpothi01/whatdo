@@ -90,14 +90,6 @@ impl fmt::Display for Whatdo {
     }
 }
 
-pub struct WhatdoDetail(pub Whatdo);
-
-struct WhatdoNode {
-    whatdo: Whatdo,
-    level: usize,
-    children: Vec<Whatdo>,
-}
-
 pub struct WhatdoTreeView {
     pub root: Whatdo,
     pub filter: Box<dyn Fn(&Whatdo) -> bool>,
@@ -147,16 +139,14 @@ impl WhatdoTreeView {
             }
         }
 
-        if let Some(whatdos) = whatdo.whatdos.as_ref().filter(|wds| wds.len() > 0) {
-            for wd in whatdos {
-                self.fmt_rec(
-                    f,
-                    wd,
-                    unprinted_path,
-                    level + 1,
-                    transitively_satisfies_filter,
-                )?;
-            }
+        for wd in whatdo.whatdos() {
+            self.fmt_rec(
+                f,
+                &wd,
+                unprinted_path,
+                level + 1,
+                transitively_satisfies_filter,
+            )?;
         }
 
         // If none of our children cleared the unprinted path,
@@ -865,7 +855,7 @@ for tracking the progress of this tool\n",
     #[test]
     fn test_sort_whatdos() {
         let whatdo = parse_file(Path::new("./test_data/sort_test.yaml")).unwrap();
-        let sorted = sort_whatdos(&whatdo, &|wd| true, &mut HashSet::new(), false);
+        let sorted = sort_whatdos(&whatdo, &|_| true, &mut HashSet::new(), false);
         assert_eq!(
             sorted.iter().map(|wd| &wd.id).collect::<Vec<_>>(),
             vec![
