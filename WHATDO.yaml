@@ -46,3 +46,4 @@ whatdos:
     whatdos:
       modify-whatdo: {}
       reparent-whatdo: {}
+      bash-completions: {}
