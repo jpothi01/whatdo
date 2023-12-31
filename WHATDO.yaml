@@ -42,4 +42,6 @@ whatdos:
   colored-tree:
     tags:
     - pretty
-  cli-enhancements: {}
+  cli-enhancements:
+    whatdos:
+      modify-whatdo: {}
