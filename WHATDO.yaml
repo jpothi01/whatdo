@@ -27,10 +27,6 @@ whatdos:
     summary: Automatically commit changes to the whatdo file
     whatdos:
       option-to-merge-when-finishing: {}
-  support-add-with-parent:
-    whatdos:
-      test-add-parent-2: {}
-      test-add-parent-3: {}
   enqueue:
     summary: Add way to enqueue something in the cli
   support-created-date:
