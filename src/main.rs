@@ -327,7 +327,8 @@ fn status() -> Result<()> {
     match wd {
         None => println!("No active whatdo"),
         Some(wd) => {
-            println!("Active: {}", wd);
+            println!("Active:");
+            println!("{}", wd);
         }
     }
 

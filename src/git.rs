@@ -22,7 +22,7 @@ pub fn checkout_new_branch(name: &str) -> Result<()> {
 
 pub fn current_branch() -> Result<String> {
     let output = Command::new("git")
-        .args(["rev-parse", "abbrev-ref", "HEAD"])
+        .args(["rev-parse", "--abbrev-ref", "HEAD"])
         .output()?;
     Ok(String::from_utf8(output.stdout).unwrap().trim().to_owned())
 }
