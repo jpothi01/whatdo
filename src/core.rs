@@ -398,9 +398,12 @@ fn write_to_file(whatdo: &Whatdo) -> Result<()> {
     Ok(())
 }
 
-fn find_whatdo(root: &Whatdo, id: &str) -> Option<Whatdo> {
+fn find_whatdo_and_parent<'a, 'b>(
+    root: &'a Whatdo,
+    id: &'b str,
+) -> Option<(&'a Whatdo, Option<&'a Whatdo>)> {
     if root.id == id {
-        return Some(root.clone());
+        return Some((root, None));
     }
 
     let whatdos = match &root.whatdos {
@@ -409,12 +412,24 @@ fn find_whatdo(root: &Whatdo, id: &str) -> Option<Whatdo> {
     };
 
     for wd in whatdos {
-        if let Some(found) = find_whatdo(&wd, id) {
-            return Some(found);
+        if let Some((wd, maybe_parent)) = find_whatdo_and_parent(&wd, id) {
+            return Some((wd, maybe_parent.or(Some(root))));
         }
     }
 
     return None;
+}
+
+fn find_whatdo(root: &Whatdo, id: &str) -> Option<Whatdo> {
+    return find_whatdo_and_parent(root, id)
+        .map(|(wd, parent)| wd)
+        .cloned();
+}
+
+fn find_parent(root: &Whatdo, id: &str) -> Option<Whatdo> {
+    return find_whatdo_and_parent(root, id)
+        .and_then(|(wd, parent)| parent)
+        .cloned();
 }
 
 /// Return all whatdos descedent from the given whatdo in the order
@@ -469,7 +484,7 @@ fn sort_whatdos<F: Fn(&Whatdo) -> bool>(
         }
     } else {
         // Base case
-        if satisfies_filter {
+        if satisfies_filter && !visited.contains(&wd.id) {
             result.push(wd.clone());
         }
     }
@@ -503,7 +518,7 @@ pub fn add(
     write_to_file(&whatdo)?;
 
     if commit {
-        git::commit([current_file], &format!("Add {} to whatdos", id))?;
+        git::commit([current_file], &format!("Add {} to whatdos", id), true)?;
     }
 
     Ok(())
@@ -516,30 +531,39 @@ pub enum NextAmount {
 
 pub fn next(amount: NextAmount, tags: Vec<String>, priorities: Vec<i64>) -> Result<Vec<Whatdo>> {
     let root = read_current_file()?;
-    let next_root = if let Some(wd) = current()? { wd } else { root };
-    let sorted = sort_whatdos(
-        &next_root,
-        &|wd| {
-            (tags.len() == 0
-                || wd
-                    .tags
-                    .as_ref()
-                    .map(|ts| tags.iter().find(|t| ts.contains(t)))
-                    .is_some())
-                && (priorities.len() == 0
-                    || (wd.priority.is_some() && priorities.contains(&wd.priority.unwrap())))
-        },
-        &mut HashSet::new(),
-        false,
-    );
+    let current_wd = current()?;
+    let mut visited = HashSet::new();
+    if let Some(current_id) = current_wd.clone().map(|c| c.id) {
+        visited.insert(current_id);
+    }
+
+    let filter = |wd: &Whatdo| {
+        (tags.len() == 0
+            || wd
+                .tags
+                .as_ref()
+                .map(|ts| tags.iter().find(|t| ts.contains(t)))
+                .is_some())
+            && (priorities.len() == 0
+                || (wd.priority.is_some() && priorities.contains(&wd.priority.unwrap())))
+    };
+
+    let mut current_sorted = if let Some(wd) = current_wd.clone() {
+        sort_whatdos(&wd, &filter, &mut visited, false)
+    } else {
+        vec![]
+    };
+
+    let mut rest_sorted = sort_whatdos(&root, &filter, &mut visited, false);
+    current_sorted.append(&mut rest_sorted);
     match amount {
-        NextAmount::All => Ok(sorted),
-        NextAmount::AtMost(n) => Ok(sorted.into_iter().take(n as usize).collect()),
+        NextAmount::All => Ok(current_sorted),
+        NextAmount::AtMost(n) => Ok(current_sorted.into_iter().take(n as usize).collect()),
     }
 }
 
 pub fn start(wd: &Whatdo) -> Result<()> {
-    git::checkout_new_branch(&wd.id)
+    git::checkout_new_branch(&wd.id, true)
 }
 
 pub fn get(id: &str) -> Result<Option<Whatdo>> {
@@ -587,7 +611,29 @@ pub fn delete(id: &str, commit: bool) -> Result<()> {
     let new_whatdo = delete_whatdo(&whatdo, id);
     write_to_file(&new_whatdo)?;
     if commit {
-        git::commit([current_file], &format!("Deleted {} from whatdos", id))?;
+        git::commit(
+            [current_file],
+            &format!("Deleted {} from whatdos", id),
+            true,
+        )?;
+    }
+    Ok(())
+}
+
+pub fn resolve(id: &str, commit: bool, merge: bool) -> Result<()> {
+    let current_file = get_current_file()?;
+    let whatdo = parse_file(&current_file)?;
+    let current_wd = current()?;
+    let target_branch = current_wd
+        .and_then(|wd| find_parent(&whatdo, &wd.id))
+        .map(|p| p.id);
+    let new_whatdo = delete_whatdo(&whatdo, id);
+    write_to_file(&new_whatdo)?;
+    if commit {
+        git::commit([current_file], &format!("Finished whatdo {}", id), true)?;
+    }
+    if merge {
+        git::merge(target_branch.as_ref().map(|s| s.as_str()), true)?;
     }
     Ok(())
 }
