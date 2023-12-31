@@ -17,11 +17,6 @@ whatdos:
     priority: 1
     tags:
     - future
-  auto-commit:
-    summary: Automatically commit changes to the whatdo file
-    whatdos: {}
-  enqueue:
-    summary: Add way to enqueue something in the cli
   support-created-date:
     priority: 2
   outside-git:
@@ -39,6 +34,13 @@ whatdos:
     - pretty
   cli-enhancements:
     whatdos:
-      modify-whatdo: {}
-      reparent-whatdo: {}
-      bash-completions: {}
+      enqueue:
+        summary: Add way to enqueue something in the cli
+      modify-whatdo:
+        summary: "`wd edit <id>`"
+      reparent-whatdo:
+        summary: "`wd mv <id>` or `wd <id> edit --parent <id>"
+      bash-completions:
+        whatdos:
+          id-suggestions: {}
+          subcommand-suggestions: {}
