@@ -11,7 +11,7 @@ This tool is one week old and is haphazardly put together
 Currently only available to install from source via `cargo`
 
 ```
-cargo install --git git@github.com:jpothi01/whatdo.git
+cargo install --git git@github.com:jpothi01/whatdo.git --branch release
 ```
 
 # At a glance
