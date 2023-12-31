@@ -330,6 +330,7 @@ fn resolve(id: &str, no_commit: bool) -> Result<()> {
             core::resolve(&wd.id, !no_commit, false)?;
             println!("Resolved:");
             println!("{}", wd);
+            println!("");
             println!("Well done!");
         }
     }
