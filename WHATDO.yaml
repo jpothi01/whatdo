@@ -44,3 +44,4 @@ whatdos:
         whatdos:
           id-suggestions: {}
           subcommand-suggestions: {}
+      support-at-sign-everywhere: {}
