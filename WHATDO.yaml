@@ -45,3 +45,4 @@ whatdos:
           id-suggestions: {}
           subcommand-suggestions: {}
       support-at-sign-everywhere: {}
+      support-adding-multiple-at-once: {}
