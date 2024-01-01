@@ -66,6 +66,14 @@ impl Whatdo {
             Some(wds) => wds.clone(),
         }
     }
+
+    pub fn simple_format(&self) -> bool {
+        self.simple_format
+            && self.queue.is_none()
+            && self.whatdos.is_none()
+            && self.priority.is_none()
+            && self.tags.is_none()
+    }
 }
 
 impl fmt::Display for Whatdo {
@@ -331,7 +339,7 @@ fn read_current_file() -> Result<Whatdo> {
 }
 
 fn serialize_whatdo(whatdo: &Whatdo) -> (serde_yaml::Value, serde_yaml::Value) {
-    if whatdo.simple_format {
+    if whatdo.simple_format() {
         let summary_value = if let Some(summary) = whatdo.summary.clone() {
             serde_yaml::Value::String(summary)
         } else {
