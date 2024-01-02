@@ -46,3 +46,5 @@ whatdos:
           subcommand-suggestions: {}
       support-at-sign-everywhere: {}
       support-adding-multiple-at-once: {}
+      level-filter:
+        summary: Ability to filter the show command by level/depth in the tree
