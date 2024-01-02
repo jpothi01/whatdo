@@ -58,7 +58,7 @@ enum Command {
         )]
         priority: Option<i64>,
 
-        #[arg(long, help = "ID of the parent whatdo, if any")]
+        #[arg(short = 'r', long, help = "ID of the parent whatdo, if any")]
         parent: Option<String>,
 
         #[arg(long, help = "Automatically start the whatdo")]
