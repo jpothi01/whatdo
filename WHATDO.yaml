@@ -48,3 +48,7 @@ whatdos:
       support-adding-multiple-at-once: {}
       level-filter:
         summary: Ability to filter the show command by level/depth in the tree
+  trim-descriptions:
+    summary: Trim descriptions so they don't add unnecessary whitespace to ls
+    tags:
+    - pretty
