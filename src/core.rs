@@ -124,7 +124,13 @@ impl WhatdoTreeView {
                     writeln!(
                         f,
                         "{}",
-                        format!("{:>>width$}[{}]", "", id, width = level + i - 2).dimmed()
+                        format!(
+                            "{:>>width$}[{}]",
+                            "",
+                            id,
+                            width = level - (unprinted_path.len() - i) - 1
+                        )
+                        .dimmed()
                     )?;
                 }
                 unprinted_path.clear();
