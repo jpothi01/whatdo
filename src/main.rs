@@ -329,7 +329,7 @@ fn finish(no_commit: bool, no_merge: bool) -> Result<()> {
     match wd {
         None => eprintln!("No current whatdo"),
         Some(wd) => {
-            core::resolve(&wd.id, !no_commit, !no_merge)?;
+            core::finish(!no_commit, !no_merge)?;
             println!("Finished:");
             println!("{}", wd);
             println!("");
@@ -357,7 +357,7 @@ fn resolve(id: &str, no_commit: bool) -> Result<()> {
     match wd {
         None => eprintln!("Not found"),
         Some(wd) => {
-            core::resolve(&wd.id, !no_commit, false)?;
+            core::resolve(&wd.id, !no_commit)?;
             println!("Resolved:");
             println!("{}", wd);
             println!("");

@@ -495,6 +495,28 @@ fn find_parent(root: &Whatdo, id: &str) -> Option<Whatdo> {
         .cloned();
 }
 
+/// Return the first ancestor of the whatdo with the given id that
+/// has a git branch
+fn find_ancestor_with_branch(root: &Whatdo, id: &str) -> Result<Option<Whatdo>> {
+    let mut current_id = id;
+
+    loop {
+        match find_whatdo_and_parent(root, &|wd| wd.id == current_id) {
+            Some((_, Some(parent))) => {
+                if git::branch_exists(&parent.branch_name())? {
+                    return Ok(Some(parent.clone()));
+                } else {
+                    current_id = &parent.id;
+                }
+            }
+            _ => {
+                // We're at the root
+                return Ok(None);
+            }
+        }
+    }
+}
+
 /// Return all whatdos descedent from the given whatdo in the order
 /// defined by the prioritization algorithm.
 /// Ignore any whatdos (or whatdo trees) for which filter(wd) returns false
@@ -744,12 +766,25 @@ pub fn delete(id: &str, commit: bool) -> Result<()> {
     Ok(())
 }
 
-pub fn resolve(id: &str, commit: bool, merge: bool) -> Result<()> {
+pub fn resolve(id: &str, commit: bool) -> Result<()> {
     let current_file = get_current_file()?;
     let whatdo = parse_file(&current_file)?;
-    let current_wd = current()?;
-    let target_branch = current_wd
-        .and_then(|wd| find_parent(&whatdo, &wd.id))
+    let new_whatdo = delete_whatdo(&whatdo, id);
+    write_to_file(&new_whatdo)?;
+    if commit {
+        git::commit([current_file], &format!("Resolved whatdo '{}'", id), true)?;
+    }
+    Ok(())
+}
+
+pub fn finish(commit: bool, merge: bool) -> Result<()> {
+    let current_file = get_current_file()?;
+    let whatdo = parse_file(&current_file)?;
+    let current_wd = match current()? {
+        None => return Err(Error::msg("No active whatdo")),
+        Some(wd) => wd,
+    };
+    let target_branch = find_ancestor_with_branch(&whatdo, &current_wd.id)?
         .and_then(|p| {
             if p.id == whatdo.id {
                 whatdo.branch_name.clone()
@@ -763,10 +798,14 @@ pub fn resolve(id: &str, commit: bool, merge: bool) -> Result<()> {
             "You have unstaged changes. Commit or revert them before finishing whatdo",
         ));
     }
-    let new_whatdo = delete_whatdo(&whatdo, id);
+    let new_whatdo = delete_whatdo(&whatdo, &current_wd.id);
     write_to_file(&new_whatdo)?;
     if commit {
-        git::commit([current_file], &format!("Finished whatdo '{}'", id), true)?;
+        git::commit(
+            [current_file],
+            &format!("Finished whatdo '{}'", &current_wd.id),
+            true,
+        )?;
     }
     if merge {
         git::merge(&target_branch, true)?;
