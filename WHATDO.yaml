@@ -53,3 +53,7 @@ whatdos:
     summary: Trim descriptions so they don't add unnecessary whitespace to ls
     tags:
     - pretty
+  wd-finish-when-parent-branch-doesnt-exist:
+    summary: wd finish doesn't work if the task's parent's branch doesn't exist
+    tags:
+    - bug
