@@ -57,3 +57,7 @@ whatdos:
     summary: wd finish doesn't work if the task's parent's branch doesn't exist
     tags:
     - bug
+  git-error:
+    summary: Fail when git commands fail, be robust to offline use case
+    tags:
+    - git
