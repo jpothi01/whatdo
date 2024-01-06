@@ -56,11 +56,7 @@ whatdos:
     tags:
     - pretty
   wd-finish-parent:
-    whatdos:
-      wd-finish-when-parent-branch-doesnt-exist:
-        summary: wd finish doesn't work if the task's parent's branch doesn't exist
-        tags:
-        - bug
+    whatdos: {}
   git-error:
     summary: Fail when git commands fail, be robust to offline use case
     tags:
