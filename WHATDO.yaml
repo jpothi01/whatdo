@@ -54,5 +54,4 @@ whatdos:
     - pretty
   custom-branch-names:
     branch_name: testing-custom-branch-names
-    whatdos:
-      custom-branch-names-child: {}
+    whatdos: {}
