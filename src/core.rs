@@ -629,6 +629,10 @@ pub fn add(
         None => {}
     }
 
+    if git::branch_exists(new_whatdo.branch_name())? {
+        return Err(Error::msg(format!("Branch with name '{}' already exists", new_whatdo.branch_name())));
+    }
+
     let parent = {
         let parent_wd = if let Some(parent_id) = &parent_id {
             let normalized_parent_id = match parent_id.as_str() {
