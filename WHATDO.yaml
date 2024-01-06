@@ -52,3 +52,5 @@ whatdos:
     summary: Trim descriptions so they don't add unnecessary whitespace to ls
     tags:
     - pretty
+  custom-branch-names:
+    branch_name: testing-custom-branch-names
