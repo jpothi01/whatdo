@@ -8,6 +8,7 @@ pub fn initial_whatdo_file() -> Whatdo {
         queue: Some(vec![String::from("setting-up-new-project")]),
         priority: None,
         tags: None,
+        branch_name: None,
         whatdos: Some(vec![
             Whatdo {
                 id: String::from("setting-up-new-project"),
@@ -17,6 +18,7 @@ pub fn initial_whatdo_file() -> Whatdo {
                     "Things to do to set up your WHATDO.yaml for a project",
                 )),
                 tags: None,
+                branch_name: None,
                 simple_format: false,
                 whatdos: Some(vec![
                     Whatdo {
@@ -28,6 +30,7 @@ pub fn initial_whatdo_file() -> Whatdo {
                         )),
                         tags: None,
                         whatdos: None,
+                        branch_name: None,
                         simple_format: false,
                     },
                     Whatdo {
@@ -39,6 +42,7 @@ pub fn initial_whatdo_file() -> Whatdo {
                         )),
                         tags: None,
                         whatdos: None,
+                        branch_name: None,
                         simple_format: false,
                     },
                     Whatdo {
@@ -50,6 +54,7 @@ pub fn initial_whatdo_file() -> Whatdo {
                     )),
                     tags: None,
                     whatdos: None,
+                    branch_name: None,
                     simple_format: false,
                 },
                 Whatdo {
@@ -61,6 +66,7 @@ pub fn initial_whatdo_file() -> Whatdo {
                     )),
                     tags: None,
                     whatdos: None,
+                    branch_name: None,
                     simple_format: true,
                 },
                 Whatdo {
@@ -72,6 +78,7 @@ pub fn initial_whatdo_file() -> Whatdo {
                     )),
                     tags: Some(vec![String::from("optional")]),
                     whatdos: None,
+                    branch_name: None,
                     simple_format: false,
                 },
                 Whatdo {
@@ -83,6 +90,7 @@ pub fn initial_whatdo_file() -> Whatdo {
                     )),
                     tags: Some(vec![String::from("optional")]),
                     whatdos: None,
+                    branch_name: None,
                     simple_format: false,
                 },
                 Whatdo {
@@ -94,6 +102,7 @@ pub fn initial_whatdo_file() -> Whatdo {
                     )),
                     tags: None,
                     whatdos: None,
+                    branch_name: None,
                     simple_format: false,
                 }]),
             }

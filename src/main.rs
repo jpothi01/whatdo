@@ -58,6 +58,13 @@ enum Command {
         )]
         priority: Option<i64>,
 
+        #[arg(
+            short,
+            long,
+            help = "Name of the git branch created for `wd start`. Default is the whatdo ID"
+        )]
+        branch_name: Option<String>,
+
         #[arg(short = 'r', long, help = "ID of the parent whatdo, if any")]
         parent: Option<String>,
 
@@ -188,6 +195,7 @@ fn add(
     tags: Vec<String>,
     summary: Option<String>,
     priority: Option<i64>,
+    branch_name: Option<String>,
     parent: Option<String>,
     start: bool,
     no_commit: bool,
@@ -197,6 +205,7 @@ fn add(
         tags,
         summary.as_ref().map(|s| s.as_str()),
         priority,
+        branch_name,
         parent,
         !no_commit,
     )?;
@@ -421,10 +430,20 @@ fn main() -> Result<()> {
             tags,
             summary,
             priority,
+            branch_name,
             parent,
             start,
             no_commit,
-        }) => add(id, tags, summary, priority, parent, start, no_commit),
+        }) => add(
+            id,
+            tags,
+            summary,
+            priority,
+            branch_name,
+            parent,
+            start,
+            no_commit,
+        ),
         Some(Command::Show {
             id,
             tags,

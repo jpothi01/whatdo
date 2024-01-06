@@ -17,6 +17,7 @@ pub struct Whatdo {
     pub queue: Option<Vec<String>>,
     pub priority: Option<i64>,
     pub tags: Option<Vec<String>>,
+    pub branch_name: Option<String>,
     pub simple_format: bool,
 }
 
@@ -49,6 +50,7 @@ impl Whatdo {
             queue: None,
             priority: None,
             tags: None,
+            branch_name: None,
             simple_format: true,
         }
     }
@@ -73,6 +75,10 @@ impl Whatdo {
             && self.whatdos.is_none()
             && self.priority.is_none()
             && self.tags.is_none()
+    }
+
+    pub fn branch_name(&self) -> &String {
+        self.branch_name.as_ref().unwrap_or(&self.id)
     }
 }
 
@@ -310,6 +316,13 @@ fn parse_whatdo(id: &str, data: &serde_yaml::Value) -> Result<Whatdo> {
                     _ => return Err(Error::msg("Expected 'tags' to be a sequence")),
                 },
             };
+            let branch_name = match items.get("branch_name") {
+                None => None,
+                Some(p) => match p {
+                    serde_yaml::Value::String(s) => Some(s.clone()),
+                    _ => return Err(Error::msg("Expected 'branch_name' to be a string")),
+                },
+            };
 
             Ok(Whatdo {
                 id: String::from(id),
@@ -318,6 +331,7 @@ fn parse_whatdo(id: &str, data: &serde_yaml::Value) -> Result<Whatdo> {
                 queue: queue_sequence.map(parse_queue_sequence).transpose()?,
                 tags: tags_sequence.map(parse_tags_sequence).transpose()?,
                 priority,
+                branch_name,
                 simple_format: false,
             })
         }
@@ -366,6 +380,13 @@ fn serialize_whatdo(whatdo: &Whatdo) -> (serde_yaml::Value, serde_yaml::Value) {
         mapping.insert(
             serde_yaml::Value::String(String::from("priority")),
             serde_yaml::Value::Number(Number::from(priority)),
+        );
+    }
+
+    if let Some(branch_name) = &whatdo.branch_name {
+        mapping.insert(
+            serde_yaml::Value::String(String::from("branch_name")),
+            serde_yaml::Value::String(branch_name.clone()),
         );
     }
 
@@ -418,11 +439,11 @@ fn write_to_file(whatdo: &Whatdo) -> Result<()> {
     Ok(())
 }
 
-fn find_whatdo_and_parent<'a, 'b>(
+fn find_whatdo_and_parent<'a, P: Fn(&Whatdo) -> bool>(
     root: &'a Whatdo,
-    id: &'b str,
+    pred: &P,
 ) -> Option<(&'a Whatdo, Option<&'a Whatdo>)> {
-    if root.id == id {
+    if pred(root) {
         return Some((root, None));
     }
 
@@ -432,7 +453,7 @@ fn find_whatdo_and_parent<'a, 'b>(
     };
 
     for wd in whatdos {
-        if let Some((wd, maybe_parent)) = find_whatdo_and_parent(&wd, id) {
+        if let Some((wd, maybe_parent)) = find_whatdo_and_parent(&wd, pred) {
             return Some((wd, maybe_parent.or(Some(root))));
         }
     }
@@ -440,8 +461,11 @@ fn find_whatdo_and_parent<'a, 'b>(
     return None;
 }
 
-fn find_whatdo_mut<'a, 'b>(root: &'a mut Whatdo, id: &'b str) -> Option<&'a mut Whatdo> {
-    if root.id == id {
+fn find_whatdo_mut<'a, P: Fn(&Whatdo) -> bool>(
+    root: &'a mut Whatdo,
+    pred: &P,
+) -> Option<&'a mut Whatdo> {
+    if pred(root) {
         return Some(root);
     }
 
@@ -451,7 +475,7 @@ fn find_whatdo_mut<'a, 'b>(root: &'a mut Whatdo, id: &'b str) -> Option<&'a mut 
     };
 
     for wd in whatdos {
-        if let Some(wd) = find_whatdo_mut(wd, id) {
+        if let Some(wd) = find_whatdo_mut(wd, pred) {
             return Some(wd);
         }
     }
@@ -460,11 +484,13 @@ fn find_whatdo_mut<'a, 'b>(root: &'a mut Whatdo, id: &'b str) -> Option<&'a mut 
 }
 
 fn find_whatdo(root: &Whatdo, id: &str) -> Option<Whatdo> {
-    return find_whatdo_and_parent(root, id).map(|(wd, _)| wd).cloned();
+    return find_whatdo_and_parent(root, &|wd| wd.id == id)
+        .map(|(wd, _)| wd)
+        .cloned();
 }
 
 fn find_parent(root: &Whatdo, id: &str) -> Option<Whatdo> {
-    return find_whatdo_and_parent(root, id)
+    return find_whatdo_and_parent(root, &|wd| wd.id == id)
         .and_then(|(_, parent)| parent)
         .cloned();
 }
@@ -505,7 +531,7 @@ fn sort_whatdos<F: Fn(&Whatdo) -> bool>(
 
     if let Some(mut whatdos) = wd.whatdos.clone().filter(|wd| wd.len() > 0) {
         whatdos.sort_by(|a, b| match (a.priority, b.priority) {
-            (Some(pa), Some(pb)) => pb.cmp(&pa),
+            (Some(pa), Some(pb)) => pa.cmp(&pb),
             (None, Some(_)) => std::cmp::Ordering::Greater,
             (Some(_), None) => std::cmp::Ordering::Less,
             (None, None) => std::cmp::Ordering::Equal,
@@ -534,13 +560,14 @@ pub fn add(
     tags: Vec<String>,
     summary: Option<&str>,
     priority: Option<i64>,
+    branch_name: Option<String>,
     parent_id: Option<String>,
     commit: bool,
 ) -> Result<(Whatdo, Option<Whatdo>)> {
     let current_file = get_current_file()?;
     let mut whatdo = parse_file(&current_file)?;
 
-    match find_whatdo(&whatdo, id) {
+    match find_whatdo_and_parent(&whatdo, &|wd| wd.id == id) {
         Some(_) => {
             return Err(Error::msg(format!(
                 "Whatdo with ID '{}' already exists",
@@ -567,7 +594,18 @@ pub fn add(
             None
         },
         priority,
+        branch_name,
     };
+
+    match find_whatdo_and_parent(&whatdo, &|wd| new_whatdo.branch_name() == wd.branch_name()) {
+        Some(_) => {
+            return Err(Error::msg(format!(
+                "Whatdo with branch name '{}' already exists",
+                new_whatdo.branch_name()
+            )))
+        }
+        None => {}
+    }
 
     let parent = {
         let parent_wd = if let Some(parent_id) = &parent_id {
@@ -578,7 +616,7 @@ pub fn add(
                 },
                 _ => parent_id.clone(),
             };
-            match find_whatdo_mut(&mut whatdo, &normalized_parent_id) {
+            match find_whatdo_mut(&mut whatdo, &|wd| &wd.id == &normalized_parent_id) {
                 Some(wd) => wd,
                 None => return Err(Error::msg("Parent not found")),
             }
@@ -639,7 +677,7 @@ pub fn next(amount: NextAmount, tags: Vec<String>, priorities: Vec<i64>) -> Resu
 }
 
 pub fn start(wd: &Whatdo) -> Result<()> {
-    git::checkout_new_branch(&wd.id, true)
+    git::checkout_new_branch(wd.branch_name(), true)
 }
 
 pub fn get(id: &str) -> Result<Option<Whatdo>> {
@@ -658,8 +696,13 @@ pub fn root() -> Result<Option<Whatdo>> {
 
 pub fn current() -> Result<Option<Whatdo>> {
     let whatdo = read_current_file()?;
-    let current_id = git::current_branch()?;
-    Ok(find_whatdo(&whatdo, &current_id))
+    let current_branch = git::current_branch()?;
+    if let Some((wd, _)) =
+        find_whatdo_and_parent(&whatdo, &|wd| wd.branch_name() == &current_branch)
+    {
+        return Ok(Some(wd.clone()));
+    }
+    Ok(None)
 }
 
 fn delete_whatdo(whatdo: &Whatdo, id: &str) -> Whatdo {
@@ -709,11 +752,12 @@ pub fn resolve(id: &str, commit: bool, merge: bool) -> Result<()> {
         .and_then(|wd| find_parent(&whatdo, &wd.id))
         .and_then(|p| {
             if p.id == whatdo.id {
-                None
+                whatdo.branch_name.clone()
             } else {
-                Some(p.id.clone())
+                Some(p.branch_name().to_owned())
             }
-        });
+        })
+        .unwrap_or(git::default_branch_name()?);
     if merge && git::has_unstaged_changes()? {
         return Err(Error::msg(
             "You have unstaged changes. Commit or revert them before finishing whatdo",
@@ -725,7 +769,7 @@ pub fn resolve(id: &str, commit: bool, merge: bool) -> Result<()> {
         git::commit([current_file], &format!("Finished whatdo '{}'", id), true)?;
     }
     if merge {
-        git::merge(target_branch.as_ref().map(|s| s.as_str()), true)?;
+        git::merge(&target_branch, true)?;
     }
     Ok(())
 }
@@ -780,12 +824,14 @@ for tracking the progress of this tool\n",
                         simple_format: false,
                         queue: None,
                         priority: None,
+                        branch_name: None,
                         tags: Some(vec!["a-tag".to_owned()]),
                     },
                 ]),
                 queue: None,
                 priority: Some(0),
                 tags: None,
+                branch_name: None,
                 simple_format: false,
             }]),
             simple_format: false,
@@ -795,6 +841,7 @@ for tracking the progress of this tool\n",
             ]),
             priority: None,
             tags: None,
+            branch_name: Some(String::from("overridden-name")),
         }
     }
 
@@ -835,18 +882,21 @@ for tracking the progress of this tool\n",
                             simple_format: false,
                             queue: None,
                             priority: None,
+                            branch_name: None,
                             tags: Some(vec!["a-tag".to_owned()]),
                         },
                     ]),
                     queue: None,
                     priority: Some(0),
                     tags: None,
+                    branch_name: None,
                     simple_format: false,
                 }]),
                 simple_format: false,
                 queue: Some(vec![String::from("read-back-whatdos")]),
                 priority: None,
                 tags: None,
+                branch_name: Some(String::from("overridden-name")),
             }
         );
         let deleted_again = delete_whatdo(&deleted, "read-back-whatdos");
@@ -871,17 +921,20 @@ for tracking the progress of this tool\n",
                         simple_format: false,
                         queue: None,
                         priority: None,
+                        branch_name: None,
                         tags: Some(vec!["a-tag".to_owned()]),
                     },]),
                     queue: None,
                     priority: Some(0),
                     tags: None,
+                    branch_name: None,
                     simple_format: false,
                 }]),
                 simple_format: false,
                 queue: Some(vec![]),
                 priority: None,
                 tags: None,
+                branch_name: Some(String::from("overridden-name")),
             }
         );
     }

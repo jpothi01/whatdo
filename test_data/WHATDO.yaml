@@ -1,4 +1,5 @@
 summary: A streamlined git-based tool for task tracking of a project
+branch_name: overridden-name
 queue:
   - read-back-whatdos
   - delete-whatdo

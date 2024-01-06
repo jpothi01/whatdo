@@ -56,7 +56,7 @@ pub fn commit(paths: impl IntoIterator<Item = PathBuf>, message: &str, push: boo
     Ok(())
 }
 
-fn default_branch_name() -> Result<String> {
+pub fn default_branch_name() -> Result<String> {
     run_command("git", ["remote", "set-head", "origin", "-a"])?;
     Ok(String::from_iter(
         run_command("git", ["rev-parse", "--abbrev-ref", "origin/HEAD"])?
@@ -72,14 +72,9 @@ pub fn has_unstaged_changes() -> Result<bool> {
         > 0);
 }
 
-pub fn merge(target_branch: Option<&str>, push: bool) -> Result<()> {
-    let target_branch_name = if let Some(branch) = target_branch {
-        branch.to_owned()
-    } else {
-        default_branch_name()?
-    };
+pub fn merge(target_branch_name: &str, push: bool) -> Result<()> {
     let current_branch_name = current_branch()?;
-    run_command("git", ["checkout", &target_branch_name])?;
+    run_command("git", ["checkout", target_branch_name])?;
     run_command("git", ["merge", &current_branch_name])?;
     if push {
         run_command("git", ["push"])?;
