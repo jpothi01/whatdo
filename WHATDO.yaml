@@ -49,6 +49,8 @@ whatdos:
       support-adding-multiple-at-once: {}
       level-filter:
         summary: Ability to filter the show command by level/depth in the tree
+      next-should-show-path:
+        summary: wd next should reveal what the task parent(s) are so you can optionally start the whole parent task instead of just the subtask
   trim-descriptions:
     summary: Trim descriptions so they don't add unnecessary whitespace to ls
     tags:
